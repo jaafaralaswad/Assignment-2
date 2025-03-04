@@ -594,6 +594,7 @@ Node 2: Constraints [0, 0, 0, 0, 0, 0]"""
 
 
 
+
 def test_get_constrained_dofs():
     # Define simple support conditions
     supports = {
@@ -620,11 +621,11 @@ def test_get_constrained_dofs():
     # Expected constrained DOFs
     expected_constrained_dofs = [
         0, 1, 2,  # Node 0: x, y, z fixed
-        8, 10, 11 # Node 1: y, rx, ry constrained
+        7, 9, 10  # Node 1: y, rx, ry constrained
     ]
 
     # Ensure constrained DOFs match expected values
-    assert sorted(constrained_dofs) == sorted(expected_constrained_dofs), "Constrained DOFs do not match expected values"
+    assert sorted(constrained_dofs) == sorted(expected_constrained_dofs), f"Expected {expected_constrained_dofs}, but got {constrained_dofs}"
 
 def test_solve():
     # Define nodes
