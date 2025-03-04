@@ -646,3 +646,50 @@ def test_get_internal_forces():
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def test_rotation_matrix_3D():
+    # Given node coordinates
+    x1, y1, z1 = 0.0, 0.0, 10.0
+    x2, y2, z2 = 15.0, 0.0, 10.0
+
+    # Expected rotation matrix
+    gamma_expected = np.array([
+        [1.0,  0.0,  0.0],
+        [0.0, -1.0,  0.0],
+        [0.0,  0.0, -1.0]
+    ])
+
+    # Compute the rotation matrix
+    gamma_computed = rotation_matrix_3D_corrected(x1, y1, z1, x2, y2, z2)
+
+    # Assert equality with a small tolerance for floating-point precision
+    np.testing.assert_allclose(gamma_computed, gamma_expected, atol=1e-8)
