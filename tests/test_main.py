@@ -79,70 +79,72 @@ def test_element_length():
 
 
 def test_display_summary(capfd):
+    # Define nodes and their coordinates
     nodes = {
-        1: (1, 0.0, 0.0, 0.0),
-        2: (2, 3.0, 4.0, 0.0),
-        3: (3, 1.0, 1.0, 1.0),
-        4: (4, 4.0, 5.0, 6.0)
+        0: [0, 0.0, 0.0, 10.0],
+        1: [1, 15.0, 0.0, 10.0],
+        2: [2, 15.0, 0.0, 0.0]
     }
 
-    elements = [(1, 2), (3, 4)]  # Two elements
+    # Define elements
+    elements = [
+        [0, 1],
+        [1, 2]
+    ]
 
+    # Define element properties
     element_properties = {
-        1: {"E": 200e9, "nu": 0.3, "b": 0.2, "h": 0.4},  # Updated to match element IDs
-        2: {"E": 150e9, "nu": 0.25, "r": 0.1}
+        0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3},
+        1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
     }
 
+    # Create structure object and call display_summary()
     structure = Structure(nodes, elements, element_properties)
     structure.display_summary()
 
     # Capture printed output
     captured = capfd.readouterr()
-    output = captured.out
+    output = captured.out.strip()
 
-    # Verify the number of elements
-    assert "Number of Elements: 2" in output
+    # Expected output
+    expected_output = """\
+--- Structure Summary ---
+Number of Elements: 2
+Elasticity Modulus (E):
+  Element 0: 1000
+  Element 1: 1000
 
-    # Check material properties
-    assert "Element 1: 200000000000.0" in output  # E for element 1
-    assert "Element 2: 150000000000.0" in output  # E for element 2
-    assert "Element 1: 0.3" in output  # Poisson's ratio for element 1
-    assert "Element 2: 0.25" in output  # Poisson's ratio for element 2
+Poisson's Ratio (nu):
+  Element 0: 0.3
+  Element 1: 0.3
 
-    # Verify element lengths
-    expected_length_1 = 5.0  # From (0,0,0) to (3,4,0)
-    expected_length_2 = np.sqrt((4 - 1) ** 2 + (5 - 1) ** 2 + (6 - 1) ** 2)
+--- Element Properties ---
+Element 1:
+  Length: 15.0000
+  Area (A): 0.5000
+  Moment of Inertia Iy: 0.0104
+  Moment of Inertia Iz: 0.0417
+  Polar Moment of Inertia J: 0.0521
+  Node 1: (0.0, 0.0, 10.0), Node 2: (15.0, 0.0, 10.0)
 
-    assert f"Length: {expected_length_1:.4f}" in output
-    assert f"Length: {expected_length_2:.4f}" in output
+Element 2:
+  Length: 10.0000
+  Area (A): 0.5000
+  Moment of Inertia Iy: 0.0417
+  Moment of Inertia Iz: 0.0104
+  Polar Moment of Inertia J: 0.0521
+  Node 1: (15.0, 0.0, 10.0), Node 2: (15.0, 0.0, 0.0)
 
-    # Check section properties (rectangular and circular)
-    A_rect = 0.2 * 0.4
-    Iy_rect = (0.4 * 0.2**3) / 12
-    Iz_rect = (0.2 * 0.4**3) / 12
-    J_rect = Iy_rect + Iz_rect
+--- Connectivity Matrix ---
+Element 1: [0 1]
+Element 2: [1 2]
 
-    A_circ = math.pi * 0.1**2
-    Iy_circ = (math.pi * 0.1**4) / 4
-    Iz_circ = (math.pi * 0.1**4) / 4
-    J_circ = Iy_circ + Iz_circ
+Global Node Numbering:
+Global Node 0: Coordinates (0.0, 0.0, 10.0)
+Global Node 1: Coordinates (15.0, 0.0, 10.0)
+Global Node 2: Coordinates (15.0, 0.0, 0.0)
 
-    assert f"Area (A): {A_rect:.4f}" in output
-    assert f"Moment of Inertia Iy: {Iy_rect:.4f}" in output
-    assert f"Moment of Inertia Iz: {Iz_rect:.4f}" in output
-    assert f"Polar Moment of Inertia J: {J_rect:.4f}" in output
+* * * * * * * * * *"""
 
-    assert f"Area (A): {A_circ:.4f}" in output
-    assert f"Moment of Inertia Iy: {Iy_circ:.4f}" in output
-    assert f"Moment of Inertia Iz: {Iz_circ:.4f}" in output
-    assert f"Polar Moment of Inertia J: {J_circ:.4f}" in output
-
-    # Check node numbering
-    assert "Global Node 1: Coordinates (0.0, 0.0, 0.0)" in output
-    assert "Global Node 2: Coordinates (3.0, 4.0, 0.0)" in output
-    assert "Global Node 3: Coordinates (1.0, 1.0, 1.0)" in output
-    assert "Global Node 4: Coordinates (4.0, 5.0, 6.0)" in output
-
-    # Check connectivity matrix
-    assert "Element 1: [1 2]" in output
-    assert "Element 2: [3 4]" in output
+    # Assert expected output
+    assert output == expected_output, f"\nExpected:\n{expected_output}\n\nGot:\n{output}"
