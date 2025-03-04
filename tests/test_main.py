@@ -461,30 +461,6 @@ def test_assemble_global_stiffness_matrix():
     # Ensure symmetry of the global stiffness matrix
     assert np.allclose(K_global, K_global.T), "Global stiffness matrix is not symmetric"
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def test_print_global_stiffness_matrix(capfd):
     # Define nodes and their coordinates
     nodes = {
@@ -520,3 +496,98 @@ def test_print_global_stiffness_matrix(capfd):
 
     # Ensure printed output matches expected matrix
     assert captured.out.strip() == expected_output.strip(), "Printed global stiffness matrix does not match expected values"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def test_compute_global_load_vector():
+    # Define loads (node: [node_id, Fx, Fy, Fz, Mx, My, Mz])
+    loads = {
+        0: [0, 10, 0, -5, 0, 0, 0],  # Node 0 has forces/moments
+        1: [1, 0, 20, 0, 0, -10, 0], # Node 1 has forces/moments
+        2: [2, 5, 5, 5, 5, 5, 5]     # Node 2 has all components
+    }
+
+    # Define supports (not used in load vector calculation)
+    supports = {
+        0: [0, 1, 1, 1, 0, 0, 0],  # Fixed in x, y, z
+        1: [1, 0, 1, 0, 1, 1, 0],  # Some constraints
+        2: [2, 0, 0, 0, 0, 0, 0]   # Free node
+    }
+
+    # Create boundary conditions object
+    bc = BoundaryConditions(loads, supports)
+
+    # Compute expected global load vector
+    total_dofs = len(loads) * 6
+    expected_F_global = np.zeros((total_dofs, 1))
+
+    for node, values in loads.items():
+        dof_index = node * 6
+        expected_F_global[dof_index:dof_index + 6, 0] = values[1:]  # Exclude node number
+
+    # Compute actual load vector
+    computed_F_global = bc.compute_global_load_vector()
+
+    # Ensure the computed load vector matches the expected values
+    assert computed_F_global.shape == (total_dofs, 1), "Global load vector has incorrect shape"
+    assert np.allclose(computed_F_global, expected_F_global), "Global load vector values are incorrect"
+
+def test_print_global_load_vector(capfd):
+    # Define loads and supports
+    loads = {
+        0: [0, 10, 0, -5, 0, 0, 0],
+        1: [1, 0, 20, 0, 0, -10, 0],
+        2: [2, 5, 5, 5, 5, 5, 5]
+    }
+    supports = {0: [0, 1, 1, 1, 0, 0, 0]}
+
+    # Create boundary conditions object
+    bc = BoundaryConditions(loads, supports)
+
+    # Capture printed output
+    bc.print_global_load_vector()
+    captured = capfd.readouterr()
+
+    # Compute expected load vector
+    F_global = bc.compute_global_load_vector()
+    expected_output = "\n--- External Load Vector ---\n" + np.array2string(F_global)
+
+    # Ensure printed output matches expected values
+    assert captured.out.strip() == expected_output.strip(), "Printed global load vector does not match expected output"
+
+def test_summarize_boundary_conditions(capfd):
+    # Define loads (not used here) and supports
+    loads = {0: [0, 0, 0, 0, 0, 0, 0]}
+    supports = {
+        0: [0, 1, 1, 1, 0, 0, 0],  # Fixed in x, y, z
+        1: [1, 0, 1, 0, 1, 1, 0],  # Some constraints
+        2: [2, 0, 0, 0, 0, 0, 0]   # Free node
+    }
+
+    # Create boundary conditions object
+    bc = BoundaryConditions(loads, supports)
+
+    # Capture printed output
+    bc.summarize_boundary_conditions()
+    captured = capfd.readouterr()
+
+    # Expected output
+    expected_output = """\
+--- Boundary Conditions ---
+Node 0: Constraints [1, 1, 1, 0, 0, 0]
+Node 1: Constraints [0, 1, 0, 1, 1, 0]
+Node 2: Constraints [0, 0, 0, 0, 0, 0]"""
+
+    # Ensure printed output matches expected summary
+    assert captured.out.strip() == expected_output.strip(), "Printed boundary conditions summary does not match expected output"
