@@ -257,22 +257,6 @@ def test_local_elastic_stiffness_matrix_3D_beam(elem_id, expected_matrix):
     # Compare with expected matrix
     assert np.allclose(computed_matrix, expected_matrix, atol=1e-3), f"Mismatch in stiffness matrix for element {elem_id}"
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Define test data
 nodes = {
     0: [0, 0.0, 0.0, 10.0],
@@ -335,3 +319,77 @@ def test_compute_local_stiffness_matrices():
     for elem_id, expected_matrix in expected_stiffness_matrices.items():
         computed_matrix = computed_matrices[elem_id]
         assert np.allclose(computed_matrix, expected_matrix, atol=1e-3), f"Mismatch in local stiffness matrix for element {elem_id}"
+
+
+
+
+
+
+
+
+
+
+
+
+# Define test data
+nodes = {
+    0: [0, 0.0, 0.0, 10.0],
+    1: [1, 15.0, 0.0, 10.0],
+    2: [2, 15.0, 0.0, 0.0]
+}
+
+elements = [
+    [0, 1],
+    [1, 2]
+]
+
+element_properties = {
+    0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3},
+    1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
+}
+
+# Expected global stiffness matrices extracted from the images
+expected_global_stiffness_matrices = {
+    0: np.array([
+        [33.333, 0, 0, 0, 0, 0, -33.333, 0, 0, 0, 0, 0],
+        [0, 0.14815, 0, 0, 0, 1.1111, 0, -0.14815, 0, 0, 0, 1.1111],
+        [0, 0, 0.037037, 0, -0.2778, 0, 0, 0, -0.037037, 0, -0.2778, 0],
+        [0, 0, 0, 1.3355, 0, 0, 0, 0, 0, -1.3355, 0, 0],
+        [0, 0, -0.27778, 0, 2.7778, 0, 0, 0, 0.27778, 0, 1.3889, 0],
+        [0, 1.1111, 0, 0, 0, 11.111, 0, -1.1111, 0, 0, 0, 5.5556],
+        [-33.333, 0, 0, 0, 0, 0, 33.333, 0, 0, 0, 0, 0],
+        [0, -0.1481, 0, 0, 0, -1.1111, 0, 0.14815, 0, 0, 0, -1.1111],
+        [0, 0, -0.037037, 0, 0.2778, 0, 0, 0, 0.037037, 0, 0.2778, 0],
+        [0, 0, 0, -1.3355, 0, 0, 0, 0, 0, 1.3355, 0, 0],
+        [0, 0, -0.27778, 0, 1.3889, 0, 0, 0, 0.27778, 0, 2.7778, 0],
+        [0, 1.1111, 0, 0, 0, 5.5556, 0, -1.1111, 0, 0, 0, 11.111]
+    ]),
+    1: np.array([
+        [0.125, 0, 0, 0, -0.625, 0, -0.125, 0, 0, 0, -0.625, 0],
+        [0, 0.5, 0, 2.5, 0, 0, 0, -0.5, 0, 2.5, 0, 0],
+        [0, 0, 50, 0, 0, 0, 0, 0, -50, 0, 0, 0],
+        [0, 2.5, 0, 16.667, 0, 0, 0, -2.5, 0, 8.3333, 0, 0],
+        [-0.625, 0, 0, 0, 4.1667, 0, 0.625, 0, 0, 0, 2.0833, 0],
+        [0, 0, 0, 0, 0, 2.0032, 0, 0, 0, 0, 0, -2.0032],
+        [-0.125, 0, 0, 0, 0.625, 0, 0.125, 0, 0, 0, 0.625, 0],
+        [0, -0.5, 0, -2.5, 0, 0, 0, 0.5, 0, -2.5, 0, 0],
+        [0, 0, -50, 0, 0, 0, 0, 0, 50, 0, 0, 0],
+        [0, 2.5, 0, 8.3333, 0, 0, 0, -2.5, 0, 16.667, 0, 0],
+        [-0.625, 0, 0, 0, 2.0833, 0, 0.625, 0, 0, 0, 4.1667, 0],
+        [0, 0, 0, 0, 0, -2.0032, 0, 0, 0, 0, 0, 2.0032]
+    ])
+}
+
+# Initialize structure
+structure = Structure(nodes, elements, element_properties)
+
+def test_compute_global_stiffness_matrices():
+    """Test that compute_global_stiffness_matrices computes correct global stiffness matrices."""
+    
+    # Compute the global stiffness matrices
+    computed_matrices = structure.compute_global_stiffness_matrices()
+
+    # Check that all elements' matrices match expected values
+    for elem_id, expected_matrix in expected_global_stiffness_matrices.items():
+        computed_matrix = computed_matrices[elem_id]
+        assert np.allclose(computed_matrix, expected_matrix, atol=1e-3), f"Mismatch in global stiffness matrix for element {elem_id}"
