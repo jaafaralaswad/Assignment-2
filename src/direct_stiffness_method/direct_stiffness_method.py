@@ -203,6 +203,9 @@ class Structure:
 
         return K_global_assembled
 
+
+
+
 class BoundaryConditions:
     def __init__(self, loads, supports):
         """
@@ -240,6 +243,8 @@ class BoundaryConditions:
         print("\n--- Boundary Conditions ---")
         for node, values in self.supports.items():
             print(f"Node {node}: Constraints {values[1:]}")
+
+
 
 
 class Solver:
