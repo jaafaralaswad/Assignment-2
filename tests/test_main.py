@@ -595,36 +595,36 @@ Node 2: Constraints [0, 0, 0, 0, 0, 0]"""
 
 
 def test_get_constrained_dofs():
-# Define simple support conditions
-supports = {
-    0: [0, 1, 1, 1, 0, 0, 0],  # Fixed in x, y, z
-    1: [1, 0, 1, 0, 1, 1, 0],  # Some constraints
-    2: [2, 0, 0, 0, 0, 0, 0]   # Free node
-}
+    # Define simple support conditions
+    supports = {
+        0: [0, 1, 1, 1, 0, 0, 0],  # Fixed in x, y, z
+        1: [1, 0, 1, 0, 1, 1, 0],  # Some constraints
+        2: [2, 0, 0, 0, 0, 0, 0]   # Free node
+    }
 
-# Define dummy loads (not used in this test)
-loads = {0: [0, 0, 0, 0, 0, 0, 0]}
+    # Define dummy loads (not used in this test)
+    loads = {0: [0, 0, 0, 0, 0, 0, 0]}
 
-# Create boundary conditions object
-bc = BoundaryConditions(loads, supports)
+    # Create boundary conditions object
+    bc = BoundaryConditions(loads, supports)
 
-# Create a dummy structure (not needed for this test)
-structure = None  
+    # Create a dummy structure (not needed for this test)
+    structure = None  
 
-# Create solver object
-solver = Solver(structure, bc)
+    # Create solver object
+    solver = Solver(structure, bc)
 
-# Compute constrained DOFs
-constrained_dofs = solver.get_constrained_dofs()
+    # Compute constrained DOFs
+    constrained_dofs = solver.get_constrained_dofs()
 
-# Expected constrained DOFs
-expected_constrained_dofs = [
-    0, 1, 2,  # Node 0: x, y, z fixed
-    8, 10, 11 # Node 1: y, rx, ry constrained
-]
+    # Expected constrained DOFs
+    expected_constrained_dofs = [
+        0, 1, 2,  # Node 0: x, y, z fixed
+        8, 10, 11 # Node 1: y, rx, ry constrained
+    ]
 
-# Ensure constrained DOFs match expected values
-assert sorted(constrained_dofs) == sorted(expected_constrained_dofs), "Constrained DOFs do not match expected values"
+    # Ensure constrained DOFs match expected values
+    assert sorted(constrained_dofs) == sorted(expected_constrained_dofs), "Constrained DOFs do not match expected values"
 
 def test_solve():
     # Define nodes
