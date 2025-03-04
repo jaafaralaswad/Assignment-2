@@ -144,14 +144,6 @@ Global Node 2: Coordinates (15.0, 0.0, 0.0)
 
 
 
-
-
-
-
-
-
-
-
 def test_local_elastic_stiffness_matrix_3D_beam():
     # Define nodes and their coordinates
     nodes = {
@@ -181,36 +173,69 @@ def test_local_elastic_stiffness_matrix_3D_beam():
 
     # Expected values (rounded for comparison)
     E = element_properties[0]["E"]
+    nu = element_properties[0]["nu"]
     A, Iy, Iz, J = structure.compute_section_properties(0)
 
     axial_stiffness = E * A / L
-    torsional_stiffness = E * J / (2.0 * (1 + element_properties[0]["nu"]) * L)
+    torsional_stiffness = E * J / (2.0 * (1 + nu) * L)
     bending_zz = E * 12.0 * Iz / L ** 3.0
     bending_yy = E * 12.0 * Iy / L ** 3.0
+    bending_zz_coupling = E * 6.0 * Iz / L ** 2.0
+    bending_yy_coupling = E * 6.0 * Iy / L ** 2.0
+    bending_zz_self = E * 4.0 * Iz / L
+    bending_yy_self = E * 4.0 * Iy / L
+    bending_zz_half = E * 2.0 * Iz / L
+    bending_yy_half = E * 2.0 * Iy / L
 
-    # Check axial terms
+    # Check all components of stiffness matrix
+
+    ## Axial stiffness
     assert k_e[0, 0] == pytest.approx(axial_stiffness)
     assert k_e[0, 6] == pytest.approx(-axial_stiffness)
     assert k_e[6, 0] == pytest.approx(-axial_stiffness)
     assert k_e[6, 6] == pytest.approx(axial_stiffness)
 
-    # Check torsion terms
+    ## Torsional stiffness
     assert k_e[3, 3] == pytest.approx(torsional_stiffness)
     assert k_e[3, 9] == pytest.approx(-torsional_stiffness)
     assert k_e[9, 3] == pytest.approx(-torsional_stiffness)
     assert k_e[9, 9] == pytest.approx(torsional_stiffness)
 
-    # Check bending terms about local z-axis
+    ## Bending stiffness about local z-axis (strong axis)
     assert k_e[1, 1] == pytest.approx(bending_zz)
     assert k_e[1, 7] == pytest.approx(-bending_zz)
     assert k_e[7, 1] == pytest.approx(-bending_zz)
     assert k_e[7, 7] == pytest.approx(bending_zz)
+    assert k_e[1, 5] == pytest.approx(bending_zz_coupling)
+    assert k_e[5, 1] == pytest.approx(bending_zz_coupling)
+    assert k_e[1, 11] == pytest.approx(bending_zz_coupling)
+    assert k_e[11, 1] == pytest.approx(bending_zz_coupling)
+    assert k_e[5, 7] == pytest.approx(-bending_zz_coupling)
+    assert k_e[7, 5] == pytest.approx(-bending_zz_coupling)
+    assert k_e[7, 11] == pytest.approx(-bending_zz_coupling)
+    assert k_e[11, 7] == pytest.approx(-bending_zz_coupling)
+    assert k_e[5, 5] == pytest.approx(bending_zz_self)
+    assert k_e[11, 11] == pytest.approx(bending_zz_self)
+    assert k_e[5, 11] == pytest.approx(bending_zz_half)
+    assert k_e[11, 5] == pytest.approx(bending_zz_half)
 
-    # Check bending terms about local y-axis
+    ## Bending stiffness about local y-axis (weak axis)
     assert k_e[2, 2] == pytest.approx(bending_yy)
     assert k_e[2, 8] == pytest.approx(-bending_yy)
     assert k_e[8, 2] == pytest.approx(-bending_yy)
     assert k_e[8, 8] == pytest.approx(bending_yy)
+    assert k_e[2, 4] == pytest.approx(-bending_yy_coupling)
+    assert k_e[4, 2] == pytest.approx(-bending_yy_coupling)
+    assert k_e[2, 10] == pytest.approx(-bending_yy_coupling)
+    assert k_e[10, 2] == pytest.approx(-bending_yy_coupling)
+    assert k_e[4, 8] == pytest.approx(bending_yy_coupling)
+    assert k_e[8, 4] == pytest.approx(bending_yy_coupling)
+    assert k_e[8, 10] == pytest.approx(bending_yy_coupling)
+    assert k_e[10, 8] == pytest.approx(bending_yy_coupling)
+    assert k_e[4, 4] == pytest.approx(bending_yy_self)
+    assert k_e[10, 10] == pytest.approx(bending_yy_self)
+    assert k_e[4, 10] == pytest.approx(bending_yy_half)
+    assert k_e[10, 4] == pytest.approx(bending_yy_half)
 
-    # Check symmetry of the matrix
+    ## Check symmetry of the matrix
     assert np.allclose(k_e, k_e.T)
