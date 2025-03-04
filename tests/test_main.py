@@ -641,17 +641,24 @@ def test_print_internal_forces(capfd):
     
     captured = capfd.readouterr().out.strip()
 
-    # Expected output manually formatted to match print behavior
-    expected_output = (
-        "\n--- Internal Forces in Local Coordinates ---\n"
-        "Element 1:\n"
-        f"{np.array2string(expected_internal_forces[0], separator=' ')}\n"
-        "Element 2:\n"
-        f"{np.array2string(expected_internal_forces[1], separator=' ')}"
-    ).strip()
+    # Construct expected output manually to match the print format
+    expected_output = "\n--- Internal Forces in Local Coordinates ---\n"
+    expected_output += "Element 1:\n"
+    expected_output += np.array2string(expected_internal_forces[0], separator=' ') + "\n"
+    expected_output += "Element 2:\n"
+    expected_output += np.array2string(expected_internal_forces[1], separator=' ')
 
-    # Normalize spacing for comparison
+    # Debugging: Print both outputs for manual verification
+    print("\n--- Expected Output ---")
+    print(expected_output)
+    print("\n--- Captured Output ---")
+    print(captured)
+
+    # Normalize spaces and newlines for comparison
     captured_normalized = " ".join(captured.split())
     expected_normalized = " ".join(expected_output.split())
 
-    assert captured_normalized == expected_normalized, f"Mismatch in printed internal forces.\nExpected:\n{expected_output}\nGot:\n{captured}"
+    assert captured_normalized == expected_normalized, (
+        f"Mismatch in printed internal forces.\n"
+        f"Expected:\n{expected_output}\n\nGot:\n{captured}"
+    )
