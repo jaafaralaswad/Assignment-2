@@ -285,16 +285,6 @@ def test_compute_local_stiffness_matrices():
         # Ensure symmetry of the stiffness matrix
         assert np.allclose(computed_k_e, computed_k_e.T), f"Stiffness matrix for element {elem_id} is not symmetric"
 
-
-
-
-
-
-
-
-
-
-
 def test_compute_global_stiffness_matrices():
     # Define nodes and their coordinates
     nodes = {
@@ -412,3 +402,71 @@ def transformation_matrix_3D(gamma: np.ndarray) -> np.ndarray:
     Gamma[6:9, 6:9] = gamma
     Gamma[9:12, 9:12] = gamma
     return Gamma
+
+
+
+
+
+
+
+
+
+
+
+def test_assemble_global_stiffness_matrix():
+    # Define nodes and their coordinates
+    nodes = {
+        0: [0, 0.0, 0.0, 10.0],
+        1: [1, 15.0, 0.0, 10.0],
+        2: [2, 15.0, 0.0, 0.0]
+    }
+
+    # Define elements
+    elements = [
+        [0, 1],
+        [1, 2]
+    ]
+
+    # Define element properties
+    element_properties = {
+        0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3},
+        1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
+    }
+
+    # Create structure object
+    structure = Structure(nodes, elements, element_properties)
+
+    # Compute assembled global stiffness matrix
+    K_global = structure.assemble_global_stiffness_matrix()
+
+    # Compute expected global stiffness matrix
+    n_global_nodes = len(nodes)  
+    total_dofs = n_global_nodes * 6
+    expected_K_global = np.zeros((total_dofs, total_dofs))
+
+    # Get the global stiffness matrices for each element
+    global_stiffness_matrices = structure.compute_global_stiffness_matrices()
+
+    for elem_idx, (node1, node2) in enumerate(elements):
+        # Determine the corresponding global DOF indices
+        dofs = np.concatenate((
+            np.arange(node1 * 6, node1 * 6 + 6),
+            np.arange(node2 * 6, node2 * 6 + 6)
+        ))
+
+        # Add the element's contribution into the expected global stiffness matrix
+        k_global = global_stiffness_matrices[elem_idx]
+        for i_local in range(12):
+            global_i = dofs[i_local]
+            for j_local in range(12):
+                global_j = dofs[j_local]
+                expected_K_global[global_i, global_j] += k_global[i_local, j_local]
+
+    # Ensure the computed global stiffness matrix has the correct shape
+    assert K_global.shape == (total_dofs, total_dofs), "Global stiffness matrix has incorrect shape"
+
+    # Check if the computed matrix matches the expected matrix
+    assert np.allclose(K_global, expected_K_global), "Assembled global stiffness matrix does not match expected values"
+
+    # Ensure symmetry of the global stiffness matrix
+    assert np.allclose(K_global, K_global.T), "Global stiffness matrix is not symmetric"
