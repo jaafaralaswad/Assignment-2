@@ -5,7 +5,7 @@ import pytest
 # Import functions
 from direct_stiffness_method.direct_stiffness_method import Structure, BoundaryConditions, Solver, PostProcessing, BucklingAnalysis, PlotResults
 
-# We test against problems that I solved by hand!
+# I test against problems that I solved "by hand" using spreadsheets and MATLAB!
 
 # Testing Class Structure for rectangular and circular cross-sections
 
@@ -384,13 +384,6 @@ def test_compute_global_stiffness_matrices():
         assert np.allclose(computed_matrix, expected_matrix, atol=1e-3), f"Mismatch in global stiffness matrix for element {elem_id}"
 
 
-
-
-
-
-
-
-
 # Define test data
 nodes = {
     0: [0, 0.0, 0.0, 10.0],
@@ -441,3 +434,70 @@ def test_assemble_global_stiffness_matrix():
 
     # Compare with the expected matrix
     assert np.allclose(computed_K_global, expected_K_global, atol=1e-3), "Mismatch in assembled global stiffness matrix"
+
+
+
+
+
+
+
+
+
+# Define test data
+loads = {
+    0: [0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    1: [1, 0.1, 0.05, -0.07, 0.05, -0.1, 0.25],
+    2: [2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+}
+
+supports = {
+    0: [0, 1, 1, 1, 1, 1, 1],
+    1: [1, 0, 0, 0, 0, 0, 0],
+    2: [2, 1, 1, 1, 0, 0, 0]
+}
+
+# Expected global load vector
+expected_F_global = np.array([
+    [0.0], [0.0], [0.0], [0.0], [0.0], [0.0],
+    [0.1], [0.05], [-0.07], [0.05], [-0.1], [0.25],
+    [0.0], [0.0], [0.0], [0.0], [0.0], [0.0]
+])
+
+# Expected boundary conditions summary output
+expected_boundary_conditions = {
+    0: [1, 1, 1, 1, 1, 1],
+    1: [0, 0, 0, 0, 0, 0],
+    2: [1, 1, 1, 0, 0, 0]
+}
+
+# Expected print output for global load vector
+expected_load_vector_output = (
+    "\n--- External Load Vector ---\n"
+    "[[ 0.  ]\n [ 0.  ]\n [ 0.  ]\n [ 0.  ]\n [ 0.  ]\n [ 0.  ]\n"
+    " [ 0.1 ]\n [ 0.05]\n [-0.07]\n [ 0.05]\n [-0.1 ]\n [ 0.25]\n"
+    " [ 0.  ]\n [ 0.  ]\n [ 0.  ]\n [ 0.  ]\n [ 0.  ]\n [ 0.  ]]\n"
+)
+
+# Initialize boundary conditions
+bc = BoundaryConditions(loads, supports)
+
+def test_compute_global_load_vector():
+    """Test that compute_global_load_vector constructs the correct global load vector."""
+    computed_F_global = bc.compute_global_load_vector()
+    assert np.allclose(computed_F_global, expected_F_global, atol=1e-3), "Mismatch in global load vector"
+
+def test_print_global_load_vector(capfd):
+    """Test that print_global_load_vector prints the correct global load vector."""
+    bc.print_global_load_vector()
+    captured = capfd.readouterr().out
+    assert expected_load_vector_output.strip() in captured.strip(), "Mismatch in printed global load vector"
+
+def test_summarize_boundary_conditions(capfd):
+    """Test that summarize_boundary_conditions prints the correct constraints."""
+    bc.summarize_boundary_conditions()
+    captured = capfd.readouterr().out
+
+    # Check if the expected output appears in the captured output
+    for node, constraints in expected_boundary_conditions.items():
+        expected_line = f"Node {node}: Constraints {constraints}"
+        assert expected_line in captured, f"Mismatch in boundary conditions output for Node {node}"
