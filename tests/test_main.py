@@ -69,15 +69,6 @@ def test_element_length():
     # Test zero length (same node)
     assert structure.element_length(0, 0) == pytest.approx(0.0)
 
-
-
-
-
-
-
-
-
-
 def test_display_summary(capfd):
     # Define nodes and their coordinates
     nodes = {
@@ -148,3 +139,78 @@ Global Node 2: Coordinates (15.0, 0.0, 0.0)
 
     # Assert expected output
     assert output == expected_output, f"\nExpected:\n{expected_output}\n\nGot:\n{output}"
+
+
+
+
+
+
+
+
+
+
+
+
+
+def test_local_elastic_stiffness_matrix_3D_beam():
+    # Define nodes and their coordinates
+    nodes = {
+        0: [0, 0.0, 0.0, 10.0],
+        1: [1, 15.0, 0.0, 10.0],
+        2: [2, 15.0, 0.0, 0.0]
+    }
+
+    # Define elements
+    elements = [
+        [0, 1],
+        [1, 2]
+    ]
+
+    # Define element properties
+    element_properties = {
+        0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3},
+        1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
+    }
+
+    # Create structure object
+    structure = Structure(nodes, elements, element_properties)
+
+    # Compute the stiffness matrix for element 0
+    L = 15.0  # Length of element 0
+    k_e = structure.local_elastic_stiffness_matrix_3D_beam(0, L)
+
+    # Expected values (rounded for comparison)
+    E = element_properties[0]["E"]
+    A, Iy, Iz, J = structure.compute_section_properties(0)
+
+    axial_stiffness = E * A / L
+    torsional_stiffness = E * J / (2.0 * (1 + element_properties[0]["nu"]) * L)
+    bending_zz = E * 12.0 * Iz / L ** 3.0
+    bending_yy = E * 12.0 * Iy / L ** 3.0
+
+    # Check axial terms
+    assert k_e[0, 0] == pytest.approx(axial_stiffness)
+    assert k_e[0, 6] == pytest.approx(-axial_stiffness)
+    assert k_e[6, 0] == pytest.approx(-axial_stiffness)
+    assert k_e[6, 6] == pytest.approx(axial_stiffness)
+
+    # Check torsion terms
+    assert k_e[3, 3] == pytest.approx(torsional_stiffness)
+    assert k_e[3, 9] == pytest.approx(-torsional_stiffness)
+    assert k_e[9, 3] == pytest.approx(-torsional_stiffness)
+    assert k_e[9, 9] == pytest.approx(torsional_stiffness)
+
+    # Check bending terms about local z-axis
+    assert k_e[1, 1] == pytest.approx(bending_zz)
+    assert k_e[1, 7] == pytest.approx(-bending_zz)
+    assert k_e[7, 1] == pytest.approx(-bending_zz)
+    assert k_e[7, 7] == pytest.approx(bending_zz)
+
+    # Check bending terms about local y-axis
+    assert k_e[2, 2] == pytest.approx(bending_yy)
+    assert k_e[2, 8] == pytest.approx(-bending_yy)
+    assert k_e[8, 2] == pytest.approx(-bending_yy)
+    assert k_e[8, 8] == pytest.approx(bending_yy)
+
+    # Check symmetry of the matrix
+    assert np.allclose(k_e, k_e.T),
