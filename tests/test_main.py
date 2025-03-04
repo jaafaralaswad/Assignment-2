@@ -689,7 +689,7 @@ def test_rotation_matrix_3D():
     ])
 
     # Compute the rotation matrix
-    gamma_computed = rotation_matrix_3D_corrected(x1, y1, z1, x2, y2, z2)
+    gamma_computed = rotation_matrix_3D(x1, y1, z1, x2, y2, z2)
 
     # Assert equality with a small tolerance for floating-point precision
     np.testing.assert_allclose(gamma_computed, gamma_expected, atol=1e-8)
