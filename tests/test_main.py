@@ -140,10 +140,6 @@ Global Node 2: Coordinates (15.0, 0.0, 0.0)
     # Assert expected output
     assert output == expected_output, f"\nExpected:\n{expected_output}\n\nGot:\n{output}"
 
-
-
-
-
 def test_local_elastic_stiffness_matrix_3D_beam():
     # Define nodes and their coordinates
     nodes = {
@@ -239,3 +235,57 @@ def test_local_elastic_stiffness_matrix_3D_beam():
 
     ## Check symmetry of the matrix
     assert np.allclose(k_e, k_e.T)
+
+
+
+
+
+
+def test_compute_local_stiffness_matrices():
+    # Define nodes and their coordinates
+    nodes = {
+        0: [0, 0.0, 0.0, 10.0],
+        1: [1, 15.0, 0.0, 10.0],
+        2: [2, 15.0, 0.0, 0.0]
+    }
+
+    # Define elements
+    elements = [
+        [0, 1],
+        [1, 2]
+    ]
+
+    # Define element properties
+    element_properties = {
+        0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3},
+        1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
+    }
+
+    # Create structure object
+    structure = Structure(nodes, elements, element_properties)
+
+    # Compute local stiffness matrices
+    stiffness_matrices = structure.compute_local_stiffness_matrices()
+
+    # Ensure correct number of matrices
+    assert len(stiffness_matrices) == len(elements), "Incorrect number of stiffness matrices"
+
+    for elem_id, (n1, n2) in enumerate(elements):
+        # Compute expected stiffness matrix
+        L = structure.element_length(n1, n2)
+        expected_k_e = structure.local_elastic_stiffness_matrix_3D_beam(elem_id, L)
+
+        # Check if matrix exists in results
+        assert elem_id in stiffness_matrices, f"Element {elem_id} missing from stiffness matrices"
+
+        # Extract computed matrix
+        computed_k_e = stiffness_matrices[elem_id]
+
+        # Ensure shape is correct (12x12)
+        assert computed_k_e.shape == (12, 12), f"Stiffness matrix for element {elem_id} has incorrect shape"
+
+        # Check if the computed matrix matches the expected matrix
+        assert np.allclose(computed_k_e, expected_k_e), f"Stiffness matrix for element {elem_id} does not match expected values"
+
+        # Ensure symmetry of the stiffness matrix
+        assert np.allclose(computed_k_e, computed_k_e.T), f"Stiffness matrix for element {elem_id} is not symmetric"
