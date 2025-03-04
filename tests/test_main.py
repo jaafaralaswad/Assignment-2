@@ -391,7 +391,7 @@ def test_compute_global_stiffness_matrices():
 
 
 
-        # Define test data
+# Define test data
 nodes = {
     0: [0, 0.0, 0.0, 10.0],
     1: [1, 15.0, 0.0, 10.0],
@@ -408,21 +408,10 @@ element_properties = {
     1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
 }
 
-# Expected assembled global stiffness matrix extracted from the screenshot
-expected_K_global = np.array([
-    [33.333, 0, 0, 0, 0, 0, -33.333, 0, 0, 0, 0, 0],
-    [0, 0.1481, 0, 0, 0, 1.1111, 0, -0.1481, 0, 0, 0, 1.1111],
-    [0, 0, 0.037, 0, -0.2778, 0, 0, 0, -0.037, 0, -0.2778, 0],
-    [0, 0, 0, 1.3355, 0, 0, 0, 0, 0, -1.3355, 0, 0],
-    [0, 0, -0.2778, 0, 2.7778, 0, 0, 0, 0.2778, 0, 1.3889, 0],
-    [0, 1.1111, 0, 0, 0, 11.111, 0, -1.1111, 0, 0, 0, 5.5556],
-    [-33.333, 0, 0, 0, 0, 0, 33.458, 0, 0, 0, -0.625, 0],
-    [0, -0.1481, 0, 0, 0, -1.1111, 0, 0.6481, 0, 2.5, 0, -1.1111],
-    [0, 0, -0.037, 0, 0.2778, 0, 0, 0, 50.037, 0, 0.2778, 0],
-    [0, 0, 0, -1.3355, 0, 0, 0, 2.5, 0, 18.002, 0, 0],
-    [0, 0, -0.2778, 0, 1.3889, 0, -0.625, 0, 0.2778, 0, 6.9444, 0],
-    [0, 1.1111, 0, 0, 0, 5.5556, 0, -1.1111, 0, 0, 0, 13.1143]
-])
+# Load expected global stiffness matrix from the provided Excel file
+file_path = "global K.xlsx"  # Ensure this file is in the correct directory
+expected_K_global_df = pd.read_excel(file_path, header=None)
+expected_K_global = expected_K_global_df.to_numpy()
 
 # Initialize structure
 structure = Structure(nodes, elements, element_properties)
