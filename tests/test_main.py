@@ -93,11 +93,6 @@ def test_compute_section_properties_circular(elem_id):
     assert np.isclose(Iz, expected_circular_results[elem_id]["Iz"], atol=1e-6), f"Failed for element {elem_id}, Iz"
     assert np.isclose(J, expected_circular_results[elem_id]["J"], atol=1e-6), f"Failed for element {elem_id}, J"
 
-
-
-
-
-
 # Define minimal test data
 nodes_test = {
     0: [0, 0.0, 0.0, 0.0]
@@ -119,3 +114,98 @@ def test_invalid_section_properties_else_case(invalid_elem_id, invalid_propertie
     
     with pytest.raises(ValueError, match="Invalid element properties. Define either \\(b, h\\) or \\(r\\)."):
         structure_invalid.compute_section_properties(invalid_elem_id)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def test_display_summary():
+        """Test that display_summary produces the expected output."""
+
+        # Define test input
+        nodes_test = {
+            0: [0, 0.0, 0.0, 10.0],
+            1: [1, 15.0, 0.0, 10.0],
+            2: [2, 15.0, 0.0, 0.0]
+        }
+
+        elements_test = [
+            [0, 1],
+            [1, 2]
+        ]
+
+        element_properties_test = {
+            0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3},
+            1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
+        }
+
+        # Expected output
+        expected_output = """--- Structure Summary ---
+    Number of Elements: 2
+    Elasticity Modulus (E):
+    Element 0: 1000
+    Element 1: 1000
+
+    Poisson's Ratio (nu):
+    Element 0: 0.3
+    Element 1: 0.3
+
+    --- Element Properties ---
+    Element 1:
+    Length: 15.0000
+    Area (A): 0.5000
+    Moment of Inertia Iy: 0.0104
+    Moment of Inertia Iz: 0.0417
+    Polar Moment of Inertia J: 0.0521
+    Node 1: (0.0, 0.0, 10.0), Node 2: (15.0, 0.0, 10.0)
+
+    Element 2:
+    Length: 10.0000
+    Area (A): 0.5000
+    Moment of Inertia Iy: 0.0417
+    Moment of Inertia Iz: 0.0104
+    Polar Moment of Inertia J: 0.0521
+    Node 1: (15.0, 0.0, 10.0), Node 2: (15.0, 0.0, 0.0)
+
+    --- Connectivity Matrix ---
+    Element 1: [0 1]
+    Element 2: [1 2]
+
+    Global Node Numbering:
+    Global Node 0: Coordinates (0.0, 0.0, 10.0)
+    Global Node 1: Coordinates (15.0, 0.0, 10.0)
+    Global Node 2: Coordinates (15.0, 0.0, 0.0)
+
+    * * * * * * * * * *
+    """
+
+        # Capture output
+        structure = Structure(nodes_test, elements_test, element_properties_test)
+        captured_output = io.StringIO()
+        sys.stdout = captured_output
+        structure.display_summary()
+        sys.stdout = sys.__stdout__  # Reset standard output
+
+        # Compare captured output with expected output
+        assert captured_output.getvalue().strip() == expected_output.strip(), "display_summary output mismatch."
