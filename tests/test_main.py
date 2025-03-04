@@ -353,3 +353,62 @@ def test_compute_global_stiffness_matrices():
 
         # Ensure symmetry of the global stiffness matrix
         assert np.allclose(computed_k_global, computed_k_global.T), f"Global stiffness matrix for element {elem_id} is not symmetric"
+
+
+def rotation_matrix_3D(x1: float, y1: float, z1: float, x2: float, y2: float, z2: float, v_temp: np.ndarray = None):
+    """
+    3D rotation matrix
+    source: Chapter 5.1 of McGuire's Matrix Structural Analysis 2nd Edition
+    Given:
+        x, y, z coordinates of the ends of two beams: x1, y1, z1, x2, y2, z2
+        optional: reference vector v_temp to orthonormalize the local y and z axes.
+            If v_temp is not provided, a default is chosen based on the beam orientation.
+    Compute:
+        A 3x3 rotation matrix where the rows represent the local x, y, and z axes in global coordinates.
+    """
+    L = np.sqrt((x2 - x1) ** 2.0 + (y2 - y1) ** 2.0 + (z2 - z1) ** 2.0)
+    lxp = (x2 - x1) / L
+    mxp = (y2 - y1) / L
+    nxp = (z2 - z1) / L
+    local_x = np.asarray([lxp, mxp, nxp])
+
+    # Choose a vector to orthonormalize the local y axis if one is not given
+    if v_temp is None:
+        # if the beam is oriented vertically, switch to the global y axis
+        if np.isclose(lxp, 0.0) and np.isclose(mxp, 0.0):
+            v_temp = np.array([0, 1.0, 0.0])
+        else:
+            # otherwise use the global z axis
+            v_temp = np.array([0, 0, 1.0])
+    else:
+        check_unit_vector(v_temp)
+        check_parallel(local_x, v_temp)
+    
+    # Compute the local y axis by taking the cross product of v_temp and local_x
+    local_y = np.cross(v_temp, local_x)
+    local_y = local_y / np.linalg.norm(local_y)
+
+    # Compute the local z axis
+    local_z = np.cross(local_x, local_y)
+    local_z = local_z / np.linalg.norm(local_z)
+
+    # Assemble the rotation matrix (gamma)
+    gamma = np.vstack((local_x, local_y, local_z))
+    
+    return gamma
+
+def transformation_matrix_3D(gamma: np.ndarray) -> np.ndarray:
+    """
+    3D transformation matrix
+    source: Chapter 5.1 of McGuire's Matrix Structural Analysis 2nd Edition
+    Given:
+        gamma -- the 3x3 rotation matrix
+    Compute:
+        Gamma -- the 12x12 transformation matrix which maps the 6 DOFs at each node.
+    """
+    Gamma = np.zeros((12, 12))
+    Gamma[0:3, 0:3] = gamma
+    Gamma[3:6, 3:6] = gamma
+    Gamma[6:9, 6:9] = gamma
+    Gamma[9:12, 9:12] = gamma
+    return Gamma
