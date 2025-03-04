@@ -600,7 +600,6 @@ Node 2: Constraints [0, 0, 0, 0, 0, 0]"""
 
 
 
-
 def test_solve():
     # Define nodes
     nodes = {
