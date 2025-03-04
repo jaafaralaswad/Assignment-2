@@ -203,11 +203,6 @@ class Structure:
 
         return K_global_assembled
 
-    def print_global_stiffness_matrix(self):
-        K_global_assembled = self.assemble_global_stiffness_matrix()
-        print(K_global_assembled)
-
-
 class BoundaryConditions:
     def __init__(self, loads, supports):
         """

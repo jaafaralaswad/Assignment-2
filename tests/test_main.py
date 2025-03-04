@@ -320,17 +320,6 @@ def test_compute_local_stiffness_matrices():
         computed_matrix = computed_matrices[elem_id]
         assert np.allclose(computed_matrix, expected_matrix, atol=1e-3), f"Mismatch in local stiffness matrix for element {elem_id}"
 
-
-
-
-
-
-
-
-
-
-
-
 # Define test data
 nodes = {
     0: [0, 0.0, 0.0, 10.0],
@@ -393,3 +382,56 @@ def test_compute_global_stiffness_matrices():
     for elem_id, expected_matrix in expected_global_stiffness_matrices.items():
         computed_matrix = computed_matrices[elem_id]
         assert np.allclose(computed_matrix, expected_matrix, atol=1e-3), f"Mismatch in global stiffness matrix for element {elem_id}"
+
+
+
+
+
+
+
+
+
+        # Define test data
+nodes = {
+    0: [0, 0.0, 0.0, 10.0],
+    1: [1, 15.0, 0.0, 10.0],
+    2: [2, 15.0, 0.0, 0.0]
+}
+
+elements = [
+    [0, 1],
+    [1, 2]
+]
+
+element_properties = {
+    0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3},
+    1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
+}
+
+# Expected assembled global stiffness matrix extracted from the screenshot
+expected_K_global = np.array([
+    [33.333, 0, 0, 0, 0, 0, -33.333, 0, 0, 0, 0, 0],
+    [0, 0.1481, 0, 0, 0, 1.1111, 0, -0.1481, 0, 0, 0, 1.1111],
+    [0, 0, 0.037, 0, -0.2778, 0, 0, 0, -0.037, 0, -0.2778, 0],
+    [0, 0, 0, 1.3355, 0, 0, 0, 0, 0, -1.3355, 0, 0],
+    [0, 0, -0.2778, 0, 2.7778, 0, 0, 0, 0.2778, 0, 1.3889, 0],
+    [0, 1.1111, 0, 0, 0, 11.111, 0, -1.1111, 0, 0, 0, 5.5556],
+    [-33.333, 0, 0, 0, 0, 0, 33.458, 0, 0, 0, -0.625, 0],
+    [0, -0.1481, 0, 0, 0, -1.1111, 0, 0.6481, 0, 2.5, 0, -1.1111],
+    [0, 0, -0.037, 0, 0.2778, 0, 0, 0, 50.037, 0, 0.2778, 0],
+    [0, 0, 0, -1.3355, 0, 0, 0, 2.5, 0, 18.002, 0, 0],
+    [0, 0, -0.2778, 0, 1.3889, 0, -0.625, 0, 0.2778, 0, 6.9444, 0],
+    [0, 1.1111, 0, 0, 0, 5.5556, 0, -1.1111, 0, 0, 0, 13.1143]
+])
+
+# Initialize structure
+structure = Structure(nodes, elements, element_properties)
+
+def test_assemble_global_stiffness_matrix():
+    """Test that assemble_global_stiffness_matrix computes the correct global stiffness matrix."""
+    
+    # Compute the assembled global stiffness matrix
+    computed_K_global = structure.assemble_global_stiffness_matrix()
+
+    # Compare with the expected matrix
+    assert np.allclose(computed_K_global, expected_K_global, atol=1e-3), "Mismatch in assembled global stiffness matrix"
