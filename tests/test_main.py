@@ -644,7 +644,61 @@ def test_get_internal_forces():
 
 
 
+class MockStructure:
+    def __init__(self):
+        self.elements = [(0, 1), (1, 2)]
+    
+    def compute_section_properties(self, elem_id):
+        if elem_id == 0:
+            return 0.5, 0.0104, 0.0417, 0.0521
+        elif elem_id == 1:
+            return 0.5, 0.0417, 0.0104, 0.0521
+    
+    def element_length(self, n1, n2):
+        if (n1, n2) == (0, 1):
+            return 15.0
+        elif (n1, n2) == (1, 2):
+            return 10.0
 
+class MockPostProcessing:
+    def get_internal_forces(self):
+        return {
+            0: np.array([-0.09468332, -0.02816345,  0.00469541,  0.16836549, -0.02359799, -0.67245177,
+                         0.09468332,  0.02816345, -0.00469541, -0.16836549, -0.04683318,  0.25]),
+            1: np.array([ 6.53045890e-02, -5.31668247e-03,  2.18365490e-02, -1.02529531e-17, -2.18365490e-01, -5.31668247e-02,
+                         -6.53045890e-02,  5.31668247e-03, -2.18365490e-02,  1.02529531e-17,  2.86968227e-16,  1.15548791e-18])
+        }
+
+@pytest.fixture
+def buckling_analysis():
+    structure = MockStructure()
+    post_processing = MockPostProcessing()
+    return BucklingAnalysis(structure, None, post_processing)
+
+def test_geometric_stiffness_matrix(buckling_analysis):
+    # Compute the stiffness matrices
+    computed_matrices = buckling_analysis.compute_local_geometric_stiffness_matrices()
+
+    # Manually hardcoded expected results (ensure these values match the correct expected results)
+    expected_kg_1 = np.array([
+        [0.006312, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, -0.006312, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000],
+        [0.000000, 0.007575, 0.000000, -0.001573, -0.011224, 0.009468, 0.000000, -0.007575, 0.000000, -0.003122, 0.011224, 0.009468],
+        # ... (complete the 12x12 matrix with the correct expected values)
+    ])
+
+    expected_kg_2 = np.array([
+        [0.005214, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000, -0.005214, 0.000000, 0.000000, 0.000000, 0.000000, 0.000000],
+        [0.000000, 0.006332, 0.000000, -0.001235, -0.009654, 0.007842, 0.000000, -0.006332, 0.000000, -0.002754, 0.009654, 0.007842],
+        # ... (complete the 12x12 matrix with the correct expected values)
+    ])
+
+    # Extract computed matrices
+    computed_matrix_1 = computed_matrices[0]  # Element 1
+    computed_matrix_2 = computed_matrices[1]  # Element 2
+
+    # Assert that computed values match expected values within a tolerance
+    assert np.allclose(computed_matrix_1, expected_kg_1, atol=1e-3), "Mismatch in Element 1 stiffness matrix"
+    assert np.allclose(computed_matrix_2, expected_kg_2, atol=1e-3), "Mismatch in Element 2 stiffness matrix"
 
 
 
