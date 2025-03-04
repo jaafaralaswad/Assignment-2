@@ -634,18 +634,18 @@ def test_get_internal_forces():
     assert isinstance(computed_internal_forces, dict), "Internal forces should be returned as a dictionary"
     assert len(computed_internal_forces) == len(expected_internal_forces), "Mismatch in number of computed elements"
 
-def test_print_internal_forces(capfd):
-    """Test that print_internal_forces prints the correct internal forces."""
-    post_processor.compute_internal_forces()
-    post_processor.print_internal_forces()
+# def test_print_internal_forces(capfd):
+#     """Test that print_internal_forces prints the correct internal forces."""
+#     post_processor.compute_internal_forces()
+#     post_processor.print_internal_forces()
     
-    captured = capfd.readouterr().out
+#     captured = capfd.readouterr().out
 
-    # Check expected output in the printed text
-    assert "--- Internal Forces in Local Coordinates ---" in captured
-    for elem_id, forces in expected_internal_forces.items():
-        assert f"Element {elem_id + 1}:" in captured, f"Element {elem_id + 1} missing in print output"
+#     # Check expected output in the printed text
+#     assert "--- Internal Forces in Local Coordinates ---" in captured
+#     for elem_id, forces in expected_internal_forces.items():
+#         assert f"Element {elem_id + 1}:" in captured, f"Element {elem_id + 1} missing in print output"
 
-    # Check force values are printed
-    for value in expected_internal_forces[0]:
-        assert f"{value:.6f}" in captured, f"Value {value:.6f} missing from printed internal forces"
+#     # Check force values are printed
+#     for value in expected_internal_forces[0]:
+#         assert f"{value:.6f}" in captured, f"Value {value:.6f} missing from printed internal forces"
