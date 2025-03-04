@@ -459,15 +459,15 @@ class BucklingAnalysis:
             geometric_stiffness_matrices[i] = self.local_geometric_stiffness_matrix_3D_beam(i, L)
         return geometric_stiffness_matrices
     
-    def print_local_stiffness_matrices(self):
-        """
-        Prints the local geometric stiffness matrices for all elements.
-        """
-        local_stiffness_matrices = self.compute_local_geometric_stiffness_matrices()
-        for elem_id, k_local in local_stiffness_matrices.items():
-            print(f"Local geometric stiffness matrix for element {elem_id}:")
-            print(k_local)
-            print("\n")
+    # def print_local_stiffness_matrices(self):
+    #     """
+    #     Prints the local geometric stiffness matrices for all elements.
+    #     """
+    #     local_stiffness_matrices = self.compute_local_geometric_stiffness_matrices()
+    #     for elem_id, k_local in local_stiffness_matrices.items():
+    #         print(f"Local geometric stiffness matrix for element {elem_id}:")
+    #         print(k_local)
+    #         print("\n")
 
     def compute_global_geometric_stiffness_matrices(self):
         """
@@ -523,9 +523,9 @@ class BucklingAnalysis:
 
         return Kg_global_assembled
 
-    def print_global_stiffness_matrix(self):
-        Kg_global_assembled = self.assemble_global_geometric_stiffness_matrix()
-        print(Kg_global_assembled)
+    # def print_global_stiffness_matrix(self):
+    #     Kg_global_assembled = self.assemble_global_geometric_stiffness_matrix()
+    #     print(Kg_global_assembled)
 
 
     def apply_boundary_conditions(self, K, Kg, constrained_dofs):

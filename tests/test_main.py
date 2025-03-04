@@ -494,18 +494,6 @@ def test_summarize_boundary_conditions(capfd):
         expected_line = f"Node {node}: Constraints {constraints}"
         assert expected_line in captured, f"Mismatch in boundary conditions output for Node {node}"
 
-
-
-
-
-
-
-
-
-
-
-
-
 # Define test data
 nodes = {
     0: [0, 0.0, 0.0, 10.0],
@@ -578,3 +566,86 @@ def test_compute_reactions():
     computed_U_global = solver.solve()
     computed_R_global = solver.compute_reactions(computed_U_global)
     assert np.allclose(computed_R_global, expected_R_global, atol=1e-3), "Mismatch in computed reactions"
+
+
+
+
+
+
+
+
+
+    # Define test data
+nodes = {
+    0: [0, 0.0, 0.0, 10.0],
+    1: [1, 15.0, 0.0, 10.0],
+    2: [2, 15.0, 0.0, 0.0]
+}
+
+elements = [
+    [0, 1],
+    [1, 2]
+]
+
+element_properties = {
+    0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3},
+    1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
+}
+
+# Expected global displacement results from previous solver tests
+expected_U_global = np.array([
+    [0.00000000e+00], [0.00000000e+00], [0.00000000e+00], 
+    [0.00000000e+00], [0.00000000e+00], [0.00000000e+00],
+    [2.84049953e-03], [1.43541318e+00], [-1.30609178e-03],
+    [-1.26072079e-01], [-1.67293339e-02], [1.66041318e-01],
+    [0.00000000e+00], [0.00000000e+00], [0.00000000e+00],
+    [-1.52275937e-01], [8.79074190e-03], [1.66041318e-01]
+])
+
+# Expected internal forces for each element
+expected_internal_forces = {
+    0: np.array([-0.09468332, -0.02816345,  0.00469541,  0.16836549, -0.02359799, -0.67245177,
+                  0.09468332,  0.02816345, -0.00469541, -0.16836549, -0.04683318,  0.25]),
+    1: np.array([6.53045890e-02, -5.31668247e-03,  2.18365490e-02, -1.02529531e-17,
+                -2.18365490e-01, -5.31668247e-02, -6.53045890e-02,  5.31668247e-03,
+                -2.18365490e-02,  1.02529531e-17,  2.86968227e-16,  1.15548791e-18])
+}
+
+# Initialize structure
+structure = Structure(nodes, elements, element_properties)
+
+# Initialize PostProcessing
+post_processor = PostProcessing(structure, expected_U_global)
+
+def test_compute_internal_forces():
+    """Test that compute_internal_forces computes the correct internal forces."""
+    post_processor.compute_internal_forces()
+    computed_internal_forces = post_processor.get_internal_forces()
+
+    for elem_id, expected_forces in expected_internal_forces.items():
+        assert np.allclose(computed_internal_forces[elem_id], expected_forces, atol=1e-3), \
+            f"Mismatch in internal forces for element {elem_id}"
+
+def test_get_internal_forces():
+    """Test that get_internal_forces returns the expected forces after computation."""
+    post_processor.compute_internal_forces()
+    computed_internal_forces = post_processor.get_internal_forces()
+
+    assert isinstance(computed_internal_forces, dict), "Internal forces should be returned as a dictionary"
+    assert len(computed_internal_forces) == len(expected_internal_forces), "Mismatch in number of computed elements"
+
+def test_print_internal_forces(capfd):
+    """Test that print_internal_forces prints the correct internal forces."""
+    post_processor.compute_internal_forces()
+    post_processor.print_internal_forces()
+    
+    captured = capfd.readouterr().out
+
+    # Check expected output in the printed text
+    assert "--- Internal Forces in Local Coordinates ---" in captured
+    for elem_id, forces in expected_internal_forces.items():
+        assert f"Element {elem_id + 1}:" in captured, f"Element {elem_id + 1} missing in print output"
+
+    # Check force values are printed
+    for value in expected_internal_forces[0]:
+        assert f"{value:.6f}" in captured, f"Value {value:.6f} missing from printed internal forces"
