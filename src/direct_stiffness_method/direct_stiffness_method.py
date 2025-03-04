@@ -1,6 +1,8 @@
 import numpy as np
 import math
-import matplotlib as plt
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from scipy.linalg import eigh
 
 
 class Structure:
@@ -361,8 +363,330 @@ class PostProcessing:
 
 
 
+class BucklingAnalysis:
+    def __init__(self, structure, solver, post_processing):
+        """
+        Initializes the buckling analysis with the structure and computed internal forces.
+        """
+        self.structure = structure
+        self.internal_forces = post_processing.get_internal_forces()
+
+    def local_geometric_stiffness_matrix_3D_beam(self, elem_id, L):
+        """
+        Compute the local element geometric stiffness matrix for a 3D beam.
+        """
+        k_g = np.zeros((12, 12))
+
+        # Retrieve individual properties
+        A, Iy, Iz, J = self.structure.compute_section_properties(elem_id)
+
+        forces = self.internal_forces[elem_id]
+        Fx2 = forces[6]
+        Mx2 = forces[9]
+        My1 = forces[4]
+        Mz1 = forces[5]
+        My2 = forces[10]
+        Mz2 = forces[11]
+
+        # upper triangle off diagonal terms
+        k_g[0, 6] = -Fx2 / L
+        k_g[1, 3] = My1 / L
+        k_g[1, 4] = Mx2 / L
+        k_g[1, 5] = Fx2 / 10.0
+        k_g[1, 7] = -6.0 * Fx2 / (5.0 * L)
+        k_g[1, 9] = My2 / L
+        k_g[1, 10] = -Mx2 / L
+        k_g[1, 11] = Fx2 / 10.0
+        k_g[2, 3] = Mz1 / L
+        k_g[2, 4] = -Fx2 / 10.0
+        k_g[2, 5] = Mx2 / L
+        k_g[2, 8] = -6.0 * Fx2 / (5.0 * L)
+        k_g[2, 9] = Mz2 / L
+        k_g[2, 10] = -Fx2 / 10.0
+        k_g[2, 11] = -Mx2 / L
+        k_g[3, 4] = -1.0 * (2.0 * Mz1 - Mz2) / 6.0
+        k_g[3, 5] = (2.0 * My1 - My2) / 6.0
+        k_g[3, 7] = -My1 / L
+        k_g[3, 8] = -Mz1 / L
+        k_g[3, 9] = -Fx2 * J / (A * L)
+        k_g[3, 10] = -1.0 * (Mz1 + Mz2) / 6.0
+        k_g[3, 11] = (My1 + My2) / 6.0
+        k_g[4, 7] = -Mx2 / L
+        k_g[4, 8] = Fx2 / 10.0
+        k_g[4, 9] = -1.0 * (Mz1 + Mz2) / 6.0
+        k_g[4, 10] = -Fx2 * L / 30.0
+        k_g[4, 11] = Mx2 / 2.0
+        k_g[5, 7] = -Fx2 / 10.0
+        k_g[5, 8] = -Mx2 / L
+        k_g[5, 9] = (My1 + My2) / 6.0
+        k_g[5, 10] = -Mx2 / 2.0
+        k_g[5, 11] = -Fx2 * L / 30.0
+        k_g[7, 9] = -My2 / L
+        k_g[7, 10] = Mx2 / L
+        k_g[7, 11] = -Fx2 / 10.0
+        k_g[8, 9] = -Mz2 / L
+        k_g[8, 10] = Fx2 / 10.0
+        k_g[8, 11] = Mx2 / L
+        k_g[9, 10] = (Mz1 - 2.0 * Mz2) / 6.0
+        k_g[9, 11] = -1.0 * (My1 - 2.0 * My2) / 6.0
+
+        # add in the symmetric lower triangle
+        k_g = k_g + k_g.transpose()
+
+        # add diagonal terms
+        k_g[0, 0] = Fx2 / L
+        k_g[1, 1] = 6.0 * Fx2 / (5.0 * L)
+        k_g[2, 2] = 6.0 * Fx2 / (5.0 * L)
+        k_g[3, 3] = Fx2 * J / (A * L)
+        k_g[4, 4] = 2.0 * Fx2 * L / 15.0
+        k_g[5, 5] = 2.0 * Fx2 * L / 15.0
+        k_g[6, 6] = Fx2 / L
+        k_g[7, 7] = 6.0 * Fx2 / (5.0 * L)
+        k_g[8, 8] = 6.0 * Fx2 / (5.0 * L)
+        k_g[9, 9] = Fx2 * J / (A * L)
+        k_g[10, 10] = 2.0 * Fx2 * L / 15.0
+        k_g[11, 11] = 2.0 * Fx2 * L / 15.0
+
+        return k_g
+
+    def compute_local_geometric_stiffness_matrices(self):
+        """
+        Computes and stores local geometric stiffness matrices for all elements.
+        """
+        geometric_stiffness_matrices = {}
+        for i, (n1, n2) in enumerate(self.structure.elements):
+            L = self.structure.element_length(n1, n2)
+            geometric_stiffness_matrices[i] = self.local_geometric_stiffness_matrix_3D_beam(i, L)
+        return geometric_stiffness_matrices
+    
+    def print_local_stiffness_matrices(self):
+        """
+        Prints the local geometric stiffness matrices for all elements.
+        """
+        local_stiffness_matrices = self.compute_local_geometric_stiffness_matrices()
+        for elem_id, k_local in local_stiffness_matrices.items():
+            print(f"Local geometric stiffness matrix for element {elem_id}:")
+            print(k_local)
+            print("\n")
+
+    def compute_global_geometric_stiffness_matrices(self):
+        """
+        Computes the global stiffness matrices by mapping local stiffness matrices from local to global coordinates.
+        The transformation is given by: k_global = Gamma^T * k_local * Gamma,
+        where Gamma is the 12x12 transformation matrix derived from the 3x3 rotation matrix.
+        """
+        global_geometric_stiffness_matrices = {}
+        local_geometric_stiffness_matrices = self.compute_local_geometric_stiffness_matrices()
+
+        for i, (n1, n2) in enumerate(self.structure.elements):
+            # Obtain nodal coordinates
+            x1, y1, z1 = self.structure.nodes[n1][1:]
+            x2, y2, z2 = self.structure.nodes[n2][1:]
+
+            # Compute the 3x3 rotation matrix
+            gamma = rotation_matrix_3D(x1, y1, z1, x2, y2, z2)
+
+            # Compute the 12x12 transformation matrix
+            Gamma = transformation_matrix_3D(gamma)
+
+            # Transform the local stiffness matrix to global coordinates
+            kg_local = local_geometric_stiffness_matrices[i]
+            kg_global = Gamma.T @ kg_local @ Gamma
+            global_geometric_stiffness_matrices[i] = kg_global
+
+        return global_geometric_stiffness_matrices
+
+    def assemble_global_geometric_stiffness_matrix(self):
+        """
+        Assembles the overall global geometric stiffness matrix from all element global geometric stiffness matrices.
+        """
+        n_global_nodes = len(self.structure.nodes)  # FIXED
+        total_dofs = n_global_nodes * 6
+        Kg_global_assembled = np.zeros((total_dofs, total_dofs))
+
+        # Get the global stiffness matrices for each element
+        global_geometric_stiffness_matrices = self.compute_global_geometric_stiffness_matrices()
+
+        for elem_idx, (node1, node2) in enumerate(self.structure.elements):  # FIXED
+            # Determine the corresponding global DOF indices
+            dofs = np.concatenate((
+                np.arange(node1 * 6, node1 * 6 + 6),
+                np.arange(node2 * 6, node2 * 6 + 6)
+            ))
+            # Add the element's contribution into the overall global stiffness matrix
+            kg_global = global_geometric_stiffness_matrices[elem_idx]
+            for i_local in range(12):
+                global_i = dofs[i_local]
+                for j_local in range(12):
+                    global_j = dofs[j_local]
+                    Kg_global_assembled[global_i, global_j] += kg_global[i_local, j_local]
+
+        return Kg_global_assembled
+
+    def print_global_stiffness_matrix(self):
+        Kg_global_assembled = self.assemble_global_geometric_stiffness_matrix()
+        print(Kg_global_assembled)
 
 
+    def apply_boundary_conditions(self, K, Kg, constrained_dofs):
+        """
+        Removes rows and columns corresponding to constrained DOFs.
+        K: Global stiffness matrix
+        Kg: Global geometric stiffness matrix
+        constrained_dofs: List of global DOF indices that are fixed
+        """
+        # Convert to NumPy arrays for easy indexing
+        free_dofs = np.setdiff1d(np.arange(K.shape[0]), constrained_dofs)
+
+        # Extract submatrices for free DOFs
+        K_reduced = K[np.ix_(free_dofs, free_dofs)]
+        Kg_reduced = Kg[np.ix_(free_dofs, free_dofs)]
+
+        return K_reduced, Kg_reduced
+
+    def calculate_critical_load(self, solver):
+        """
+        Calculates the critical load and reconstructs the full global mode shape.
+        
+        Returns:
+            - min_eigenvalue: The minimum positive eigenvalue (critical buckling load).
+            - global_mode_shape: The full eigenvector (mode shape) with zeros at constrained DOFs.
+        """
+        # Compute the global stiffness matrices
+        Kg_global_assembled = self.assemble_global_geometric_stiffness_matrix()
+        K_global_assembled = self.structure.assemble_global_stiffness_matrix()
+
+        # Get constrained DOFs from the solver
+        constrained_dofs = solver.get_constrained_dofs()
+        all_dofs = np.arange(K_global_assembled.shape[0])  # Full DOFs
+        free_dofs = np.setdiff1d(all_dofs, constrained_dofs)  # Free DOFs
+
+        # Apply boundary conditions
+        K_reduced, Kg_reduced = self.apply_boundary_conditions(K_global_assembled, Kg_global_assembled, constrained_dofs)
+
+        # Solve the generalized eigenvalue problem
+        eigenvalues, eigenvectors = eigh(K_reduced, -Kg_reduced)
+
+        # Extract the smallest positive eigenvalue
+        positive_eigenvalues = eigenvalues[eigenvalues > 0]
+        
+        if len(positive_eigenvalues) == 0:
+            raise ValueError("No positive eigenvalues found. Check the system setup.")
+
+        min_eigenvalue = np.min(positive_eigenvalues)
+
+        # Find the index of the minimum positive eigenvalue
+        min_index = np.where(eigenvalues == min_eigenvalue)[0][0]
+
+        # Extract the corresponding reduced eigenvector
+        min_eigenvector = eigenvectors[:, min_index]
+
+        # Create the full global mode shape and insert zeros at constrained DOFs
+        global_mode_shape = np.zeros(K_global_assembled.shape[0])
+        global_mode_shape[free_dofs] = min_eigenvector  # Fill only free DOFs
+
+        return min_eigenvalue, global_mode_shape
+
+
+class PlotResults:
+    def __init__(self, structure, U_global, scale=1.0):
+        """
+        Initializes the plotting class with the structure and deformation data.
+
+        Parameters:
+        - structure: Structure object containing nodes and elements.
+        - U_global: Global displacement vector (translations & rotations).
+        - scale: Scaling factor for visualization.
+        """
+        self.structure = structure
+        self.U_global = U_global
+        self.scale = scale  # Scaling factor for deformation
+
+    def hermite_interpolation(self, u1, theta1, u2, theta2, L, num_points=500):
+        """
+        Performs Hermite cubic interpolation for bending displacements.
+
+        Parameters:
+        - u1, u2: Displacements at both nodes.
+        - theta1, theta2: Rotations at both nodes.
+        - L: Element length.
+        - num_points: Number of interpolation points.
+
+        Returns:
+        - Interpolated displacement values.
+        """
+        s_vals = np.linspace(0, 1, num_points)  # Normalized coordinate (0 to 1)
+        
+        # Hermite shape functions
+        N1 = 1 - 3 * s_vals**2 + 2 * s_vals**3
+        N2 = L * (s_vals - 2 * s_vals**2 + s_vals**3)
+        N3 = 3 * s_vals**2 - 2 * s_vals**3
+        N4 = L * (-s_vals**2 + s_vals**3)
+
+        # Compute interpolated displacements
+        u_interp = N1 * u1 + N2 * theta1 + N3 * u2 + N4 * theta2
+        return u_interp
+
+    def plot_deformed_shape(self, num_points=500):
+        """
+        Plots the deformed shape of the 3D beam structure using Hermite interpolation.
+        """
+        fig = plt.figure(figsize=(8, 6))
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Plot undeformed shape (dashed black lines)
+        for (n1, n2) in self.structure.elements:
+            node1_coords = np.array(self.structure.nodes[n1][1:])
+            node2_coords = np.array(self.structure.nodes[n2][1:])
+
+            ax.plot([node1_coords[0], node2_coords[0]],
+                    [node1_coords[1], node2_coords[1]],
+                    [node1_coords[2], node2_coords[2]], 'k--', linewidth=0.5)  # Dashed black for undeformed
+
+        # Plot deformed shape (interpolated)
+        for i, (n1, n2) in enumerate(self.structure.elements):
+            # Get original nodal coordinates
+            x1, y1, z1 = self.structure.nodes[n1][1:]
+            x2, y2, z2 = self.structure.nodes[n2][1:]
+            
+            # Compute element length
+            L = self.structure.element_length(n1, n2)
+
+            # Extract displacements & rotations from global displacement vector
+            u1 = self.U_global[n1 * 6:(n1 * 6) + 3].flatten()  # (ux, uy, uz)
+            u2 = self.U_global[n2 * 6:(n2 * 6) + 3].flatten()
+            theta1 = self.U_global[(n1 * 6) + 3:(n1 * 6) + 6].flatten()  # (θx, θy, θz)
+            theta2 = self.U_global[(n2 * 6) + 3:(n2 * 6) + 6].flatten()
+
+            # Compute axial displacement (linear interpolation)
+            u_interp_x = np.linspace(u1[0], u2[0], num_points) * self.scale
+
+            # Interpolate bending displacements using Hermite functions
+            u_interp_y = self.hermite_interpolation(u1[1], theta1[2], u2[1], theta2[2], L, num_points) * self.scale
+            u_interp_z = self.hermite_interpolation(u1[2], theta1[1], u2[2], theta2[1], L, num_points) * self.scale
+
+            # Compute torsional rotation (linear interpolation)
+            theta_interp_x = np.linspace(theta1[0], theta2[0], num_points)
+
+            # Compute deformed positions
+            x_interp = np.linspace(x1, x2, num_points) + u_interp_x
+            y_interp = np.linspace(y1, y2, num_points) + u_interp_y
+            z_interp = np.linspace(z1, z2, num_points) + u_interp_z
+
+            # Plot deformed element
+            ax.plot(x_interp, y_interp, z_interp, 'r', linewidth=1.5)  # Red for deformed shape
+
+        # Plot nodes
+        node_coords = np.array([self.structure.nodes[n][1:] for n in self.structure.nodes])
+        ax.scatter(node_coords[:, 0], node_coords[:, 1], node_coords[:, 2], color='b', s=20, label="Nodes")
+
+        # Labels and title
+        ax.set_xlabel('X Coordinate')
+        ax.set_ylabel('Y Coordinate')
+        ax.set_zlabel('Z Coordinate')
+        ax.set_title('Deformed Structure (Red) vs Undeformed (Dashed Black)')
+        plt.legend()
+        plt.show()
 
 
 # Useful functions
@@ -431,7 +755,6 @@ def check_unit_vector(vec: np.ndarray):
         return
     else:
         raise ValueError("Expected a unit vector for reference vector.")
-
 
 def check_parallel(vec_1: np.ndarray, vec_2: np.ndarray):
     """
