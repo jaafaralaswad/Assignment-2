@@ -213,4 +213,4 @@ def test_local_elastic_stiffness_matrix_3D_beam():
     assert k_e[8, 8] == pytest.approx(bending_yy)
 
     # Check symmetry of the matrix
-    assert np.allclose(k_e, k_e.T),
+    assert np.allclose(k_e, k_e.T)
