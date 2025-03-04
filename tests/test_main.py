@@ -403,16 +403,6 @@ def transformation_matrix_3D(gamma: np.ndarray) -> np.ndarray:
     Gamma[9:12, 9:12] = gamma
     return Gamma
 
-
-
-
-
-
-
-
-
-
-
 def test_assemble_global_stiffness_matrix():
     # Define nodes and their coordinates
     nodes = {
@@ -470,3 +460,66 @@ def test_assemble_global_stiffness_matrix():
 
     # Ensure symmetry of the global stiffness matrix
     assert np.allclose(K_global, K_global.T), "Global stiffness matrix is not symmetric"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    import pytest
+import numpy as np
+from your_module import Structure  # Replace 'your_module' with actual module name
+
+def test_print_global_stiffness_matrix(capfd):
+    # Define nodes and their coordinates
+    nodes = {
+        0: [0, 0.0, 0.0, 10.0],
+        1: [1, 15.0, 0.0, 10.0],
+        2: [2, 15.0, 0.0, 0.0]
+    }
+
+    # Define elements
+    elements = [
+        [0, 1],
+        [1, 2]
+    ]
+
+    # Define element properties
+    element_properties = {
+        0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3},
+        1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
+    }
+
+    # Create structure object
+    structure = Structure(nodes, elements, element_properties)
+
+    # Capture printed output
+    structure.print_global_stiffness_matrix()
+    captured = capfd.readouterr()
+
+    # Compute expected global stiffness matrix
+    K_global = structure.assemble_global_stiffness_matrix()
+
+    # Convert expected output to a string (similar to print output)
+    expected_output = np.array2string(K_global)
+
+    # Ensure printed output matches expected matrix
+    assert captured.out.strip() == expected_output.strip(), "Printed global stiffness matrix does not match expected values"
