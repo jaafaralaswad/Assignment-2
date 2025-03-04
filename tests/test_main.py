@@ -1,35 +1,48 @@
 import numpy as np
+import math
 import pytest
 
 # Import functions
 from direct_stiffness_method.direct_stiffness_method import Structure, BoundaryConditions, Solver, PostProcessing, BucklingAnalysis, PlotResults
 
-def test_compute_section_properties_rectangular_0():
-    elements = {0: {"type": "rectangular"}}
-    element_properties = {0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3}}
-    structure = Structure(elements, element_properties)
-    A, Iy, Iz, J = structure.compute_section_properties(0)
-    assert np.isclose(A, 0.5)
-    assert np.isclose(Iy, 0.01041667)
-    assert np.isclose(Iz, 0.04166667)
-    assert np.isclose(J, 0.05208333)
-
-def test_compute_section_properties_rectangular_1():
-    elements = {1: {"type": "rectangular"}}
-    element_properties = {1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}}
-    structure = Structure(elements, element_properties)
+def test_rectangular_section():
+    nodes = {}
+    elements = {}
+    element_properties = {
+        1: {"E": 200e9, "nu": 0.3, "b": 0.2, "h": 0.4}
+    }
+    
+    structure = Structure(nodes, elements, element_properties)
     A, Iy, Iz, J = structure.compute_section_properties(1)
-    assert np.isclose(A, 0.5)
-    assert np.isclose(Iy, 0.04166667)
-    assert np.isclose(Iz, 0.01041667)
-    assert np.isclose(J, 0.05208333)
+    
+    assert A == pytest.approx(0.08)  # 0.2 * 0.4
+    assert Iy == pytest.approx((0.4 * 0.2**3) / 12)
+    assert Iz == pytest.approx((0.2 * 0.4**3) / 12)
+    assert J == pytest.approx(Iy + Iz)
 
-def test_compute_section_properties_circular():
-    elements = {0: {"type": "circular"}}
-    element_properties = {0: {"r": 1.0, "E": 500, "nu": 0.3}}
-    structure = Structure(elements, element_properties)
-    A, Iy, Iz, J = structure.compute_section_properties(0)
-    assert np.isclose(A, 3.14159265)
-    assert np.isclose(Iy, 0.78539816)
-    assert np.isclose(Iz, 0.78539816)
-    assert np.isclose(J, 1.57079633)
+def test_circular_section():
+    nodes = {}
+    elements = {}
+    element_properties = {
+        2: {"E": 200e9, "nu": 0.3, "r": 0.1}
+    }
+    
+    structure = Structure(nodes, elements, element_properties)
+    A, Iy, Iz, J = structure.compute_section_properties(2)
+    
+    assert A == pytest.approx(math.pi * 0.1**2)
+    assert Iy == pytest.approx((math.pi * 0.1**4) / 4)
+    assert Iz == pytest.approx((math.pi * 0.1**4) / 4)
+    assert J == pytest.approx(Iy + Iz)
+
+def test_invalid_element_properties():
+    nodes = {}
+    elements = {}
+    element_properties = {
+        3: {"E": 200e9, "nu": 0.3}  # Missing b, h, or r
+    }
+    
+    structure = Structure(nodes, elements, element_properties)
+    
+    with pytest.raises(ValueError, match="Invalid element properties"):
+        structure.compute_section_properties(3)
