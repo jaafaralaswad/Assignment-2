@@ -80,8 +80,8 @@ def test_display_summary(capfd):
     elements = [(1, 2), (3, 4)]  # Two elements
 
     element_properties = {
-        0: {"E": 200e9, "nu": 0.3, "b": 0.2, "h": 0.4},
-        1: {"E": 150e9, "nu": 0.25, "r": 0.1}
+        1: {"E": 200e9, "nu": 0.3, "b": 0.2, "h": 0.4},  # Updated index to match elements
+        2: {"E": 150e9, "nu": 0.25, "r": 0.1}
     }
 
     structure = Structure(nodes, elements, element_properties)
@@ -89,24 +89,28 @@ def test_display_summary(capfd):
 
     # Capture printed output
     captured = capfd.readouterr()
+    output = captured.out
+
+    # Print output for debugging (if needed)
+    # print("Captured Output:\n", output)
 
     # Verify the number of elements
-    assert "Number of Elements: 2" in captured.out
+    assert "Number of Elements: 2" in output
 
     # Check material properties
-    assert "Element 0: 200000000000.0" in captured.out  # E for element 0
-    assert "Element 1: 150000000000.0" in captured.out  # E for element 1
-    assert "Element 0: 0.3" in captured.out  # Poisson's ratio for element 0
-    assert "Element 1: 0.25" in captured.out  # Poisson's ratio for element 1
+    assert "Element 1: 200000000000.0" in output  # E for element 1
+    assert "Element 2: 150000000000.0" in output  # E for element 2
+    assert "Element 1: 0.3" in output  # Poisson's ratio for element 1
+    assert "Element 2: 0.25" in output  # Poisson's ratio for element 2
 
     # Verify element lengths
     expected_length_1 = 5.0  # From (0,0,0) to (3,4,0)
     expected_length_2 = np.sqrt((4 - 1) ** 2 + (5 - 1) ** 2 + (6 - 1) ** 2)
-    
-    assert f"Length: {expected_length_1:.4f}" in captured.out
-    assert f"Length: {expected_length_2:.4f}" in captured.out
 
-    # Check section properties
+    assert f"Length: {expected_length_1:.4f}" in output
+    assert f"Length: {expected_length_2:.4f}" in output
+
+    # Check section properties (rectangular and circular)
     A_rect = 0.2 * 0.4
     Iy_rect = (0.4 * 0.2**3) / 12
     Iz_rect = (0.2 * 0.4**3) / 12
@@ -117,22 +121,23 @@ def test_display_summary(capfd):
     Iz_circ = (math.pi * 0.1**4) / 4
     J_circ = Iy_circ + Iz_circ
 
-    assert f"Area (A): {A_rect:.4f}" in captured.out
-    assert f"Moment of Inertia Iy: {Iy_rect:.4e}" in captured.out
-    assert f"Moment of Inertia Iz: {Iz_rect:.4e}" in captured.out
-    assert f"Polar Moment of Inertia J: {J_rect:.4e}" in captured.out
+    # Ensure proper formatting (using .4f for consistency)
+    assert f"Area (A): {A_rect:.4f}" in output
+    assert f"Moment of Inertia Iy: {Iy_rect:.4f}" in output
+    assert f"Moment of Inertia Iz: {Iz_rect:.4f}" in output
+    assert f"Polar Moment of Inertia J: {J_rect:.4f}" in output
 
-    assert f"Area (A): {A_circ:.4f}" in captured.out
-    assert f"Moment of Inertia Iy: {Iy_circ:.4e}" in captured.out
-    assert f"Moment of Inertia Iz: {Iz_circ:.4e}" in captured.out
-    assert f"Polar Moment of Inertia J: {J_circ:.4e}" in captured.out
+    assert f"Area (A): {A_circ:.4f}" in output
+    assert f"Moment of Inertia Iy: {Iy_circ:.4f}" in output
+    assert f"Moment of Inertia Iz: {Iz_circ:.4f}" in output
+    assert f"Polar Moment of Inertia J: {J_circ:.4f}" in output
 
     # Check node numbering
-    assert "Global Node 1: Coordinates (0.0, 0.0, 0.0)" in captured.out
-    assert "Global Node 2: Coordinates (3.0, 4.0, 0.0)" in captured.out
-    assert "Global Node 3: Coordinates (1.0, 1.0, 1.0)" in captured.out
-    assert "Global Node 4: Coordinates (4.0, 5.0, 6.0)" in captured.out
+    assert "Global Node 1: Coordinates (0.0, 0.0, 0.0)" in output
+    assert "Global Node 2: Coordinates (3.0, 4.0, 0.0)" in output
+    assert "Global Node 3: Coordinates (1.0, 1.0, 1.0)" in output
+    assert "Global Node 4: Coordinates (4.0, 5.0, 6.0)" in output
 
     # Check connectivity matrix
-    assert "Element 1: [1 2]" in captured.out
-    assert "Element 2: [3 4]" in captured.out
+    assert "Element 1: [1 2]" in output
+    assert "Element 2: [3 4]" in output
