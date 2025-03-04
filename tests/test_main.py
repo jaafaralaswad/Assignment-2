@@ -69,6 +69,15 @@ def test_element_length():
     # Test zero length (same node)
     assert structure.element_length(0, 0) == pytest.approx(0.0)
 
+
+
+
+
+
+
+
+
+
 def test_display_summary(capfd):
     nodes = {
         1: (1, 0.0, 0.0, 0.0),
@@ -80,7 +89,7 @@ def test_display_summary(capfd):
     elements = [(1, 2), (3, 4)]  # Two elements
 
     element_properties = {
-        1: {"E": 200e9, "nu": 0.3, "b": 0.2, "h": 0.4},  # Updated index to match elements
+        1: {"E": 200e9, "nu": 0.3, "b": 0.2, "h": 0.4},  # Updated to match element IDs
         2: {"E": 150e9, "nu": 0.25, "r": 0.1}
     }
 
@@ -90,9 +99,6 @@ def test_display_summary(capfd):
     # Capture printed output
     captured = capfd.readouterr()
     output = captured.out
-
-    # Print output for debugging (if needed)
-    # print("Captured Output:\n", output)
 
     # Verify the number of elements
     assert "Number of Elements: 2" in output
@@ -121,7 +127,6 @@ def test_display_summary(capfd):
     Iz_circ = (math.pi * 0.1**4) / 4
     J_circ = Iy_circ + Iz_circ
 
-    # Ensure proper formatting (using .4f for consistency)
     assert f"Area (A): {A_rect:.4f}" in output
     assert f"Moment of Inertia Iy: {Iy_rect:.4f}" in output
     assert f"Moment of Inertia Iz: {Iz_rect:.4f}" in output
