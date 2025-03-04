@@ -236,11 +236,6 @@ def test_local_elastic_stiffness_matrix_3D_beam():
     ## Check symmetry of the matrix
     assert np.allclose(k_e, k_e.T)
 
-
-
-
-
-
 def test_compute_local_stiffness_matrices():
     # Define nodes and their coordinates
     nodes = {
@@ -289,3 +284,72 @@ def test_compute_local_stiffness_matrices():
 
         # Ensure symmetry of the stiffness matrix
         assert np.allclose(computed_k_e, computed_k_e.T), f"Stiffness matrix for element {elem_id} is not symmetric"
+
+
+
+
+
+
+
+
+
+
+
+def test_compute_global_stiffness_matrices():
+    # Define nodes and their coordinates
+    nodes = {
+        0: [0, 0.0, 0.0, 10.0],
+        1: [1, 15.0, 0.0, 10.0],
+        2: [2, 15.0, 0.0, 0.0]
+    }
+
+    # Define elements
+    elements = [
+        [0, 1],
+        [1, 2]
+    ]
+
+    # Define element properties
+    element_properties = {
+        0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3},
+        1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
+    }
+
+    # Create structure object
+    structure = Structure(nodes, elements, element_properties)
+
+    # Compute global stiffness matrices
+    global_stiffness_matrices = structure.compute_global_stiffness_matrices()
+
+    # Ensure correct number of global stiffness matrices
+    assert len(global_stiffness_matrices) == len(elements), "Incorrect number of global stiffness matrices"
+
+    for elem_id, (n1, n2) in enumerate(elements):
+        # Compute expected local stiffness matrix
+        L = structure.element_length(n1, n2)
+        k_local = structure.local_elastic_stiffness_matrix_3D_beam(elem_id, L)
+
+        # Compute expected transformation matrices
+        x1, y1, z1 = nodes[n1][1:]
+        x2, y2, z2 = nodes[n2][1:]
+
+        gamma = rotation_matrix_3D(x1, y1, z1, x2, y2, z2)
+        Gamma = transformation_matrix_3D(gamma)
+
+        # Compute expected global stiffness matrix
+        expected_k_global = Gamma.T @ k_local @ Gamma
+
+        # Check if matrix exists in results
+        assert elem_id in global_stiffness_matrices, f"Element {elem_id} missing from global stiffness matrices"
+
+        # Extract computed global stiffness matrix
+        computed_k_global = global_stiffness_matrices[elem_id]
+
+        # Ensure shape is correct (12x12)
+        assert computed_k_global.shape == (12, 12), f"Global stiffness matrix for element {elem_id} has incorrect shape"
+
+        # Check if the computed matrix matches the expected matrix
+        assert np.allclose(computed_k_global, expected_k_global), f"Global stiffness matrix for element {elem_id} does not match expected values"
+
+        # Ensure symmetry of the global stiffness matrix
+        assert np.allclose(computed_k_global, computed_k_global.T), f"Global stiffness matrix for element {elem_id} is not symmetric"
