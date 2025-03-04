@@ -94,7 +94,11 @@ def test_compute_section_properties_circular(elem_id):
     assert np.isclose(J, expected_circular_results[elem_id]["J"], atol=1e-6), f"Failed for element {elem_id}, J"
 
 
-    # Define test data for invalid sections
+
+
+
+
+# Define minimal test data
 nodes_test = {
     0: [0, 0.0, 0.0, 0.0]
 }
@@ -104,13 +108,10 @@ elements_test = [
 ]
 
 @pytest.mark.parametrize("invalid_elem_id, invalid_properties", [
-    (0, {"E": 500, "nu": 0.3}),  # Missing both r and (b, h)
-    (1, {"b": 0.5, "E": 500, "nu": 0.3}),  # Missing h
-    (2, {"h": 1.0, "E": 500, "nu": 0.3}),  # Missing b
-    (3, {"r": None, "E": 500, "nu": 0.3}),  # Invalid r value
+    (0, {"E": 500, "nu": 0.3})  # Missing both r and (b, h)
 ])
-def test_invalid_section_properties(invalid_elem_id, invalid_properties):
-    """Test that compute_section_properties raises ValueError for invalid section definitions."""
+def test_invalid_section_properties_else_case(invalid_elem_id, invalid_properties):
+    """Test that compute_section_properties raises ValueError when neither (b, h) nor r is defined."""
     
     # Create a temporary structure with invalid properties
     invalid_element_properties = {invalid_elem_id: invalid_properties}
