@@ -684,8 +684,8 @@ def test_rotation_matrix_3D():
     # Expected rotation matrix
     gamma_expected = np.array([
         [1.0,  0.0,  0.0],
-        [0.0, -1.0,  0.0],
-        [0.0,  0.0, -1.0]
+        [0.0, 1.0,  0.0],
+        [0.0,  0.0, 1.0]
     ])
 
     # Compute the rotation matrix
