@@ -1,0 +1,3 @@
+ChatGPT was used to get information about python syntax, output format and debugging.
+ChatGPT was used to get information about GitHub actions.
+ChatGPT was used to create additional tests to make sure >90% coverage in codecov.
