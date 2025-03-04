@@ -7,6 +7,8 @@ from direct_stiffness_method.direct_stiffness_method import Structure, BoundaryC
 
 # We test against problems that I solved by hand!
 
+# Testing Class Structure for rectangular and circular cross-sections
+
 # Define test data
 nodes = {
     0: [0, 0.0, 0.0, 10.0],
@@ -48,3 +50,45 @@ def test_element_length(elem_id, nodes_pair):
     
     assert np.isclose(length, expected_results[elem_id]["l"], atol=1e-6), f"Failed for element {elem_id}, length"
 
+# Define test data for circular sections
+nodes_circular = {
+    0: [0, 0.0, 0.0, 0.0],
+    1: [1, -5.0, 1.0, 10.0],
+    2: [2, -1.0, 5.0, 13.0],
+    3: [3, -3.0, 7.0, 11.0],
+    4: [4, 6.0, 9.0, 5.0]
+}
+
+elements_circular = [
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [2, 4]
+]
+
+element_properties_circular = {
+    0: {"r": 1.0, "E": 500, "nu": 0.3},
+    1: {"r": 1.0, "E": 500, "nu": 0.3},
+    2: {"r": 1.0, "E": 500, "nu": 0.3},
+    3: {"r": 1.0, "E": 500, "nu": 0.3},
+}
+
+# Expected results for circular sections
+expected_circular_results = {
+    0: {"A": 3.141592654, "Iy": 0.785398163, "Iz": 0.785398163, "J": 1.570796327},
+    1: {"A": 3.141592654, "Iy": 0.785398163, "Iz": 0.785398163, "J": 1.570796327},
+    2: {"A": 3.141592654, "Iy": 0.785398163, "Iz": 0.785398163, "J": 1.570796327},
+    3: {"A": 3.141592654, "Iy": 0.785398163, "Iz": 0.785398163, "J": 1.570796327},
+}
+
+# Initialize the structure instance
+structure_circular = Structure(nodes_circular, elements_circular, element_properties_circular)
+
+@pytest.mark.parametrize("elem_id", [0, 1, 2, 3])
+def test_compute_section_properties_circular(elem_id):
+    A, Iy, Iz, J = structure_circular.compute_section_properties(elem_id)
+    
+    assert np.isclose(A, expected_circular_results[elem_id]["A"], atol=1e-6), f"Failed for element {elem_id}, A"
+    assert np.isclose(Iy, expected_circular_results[elem_id]["Iy"], atol=1e-6), f"Failed for element {elem_id}, Iy"
+    assert np.isclose(Iz, expected_circular_results[elem_id]["Iz"], atol=1e-6), f"Failed for element {elem_id}, Iz"
+    assert np.isclose(J, expected_circular_results[elem_id]["J"], atol=1e-6), f"Failed for element {elem_id}, J"
