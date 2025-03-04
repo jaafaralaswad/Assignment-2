@@ -484,9 +484,6 @@ def test_assemble_global_stiffness_matrix():
 
 
 
-    import pytest
-import numpy as np
-from your_module import Structure  # Replace 'your_module' with actual module name
 
 def test_print_global_stiffness_matrix(capfd):
     # Define nodes and their coordinates
