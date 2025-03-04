@@ -435,14 +435,6 @@ def test_assemble_global_stiffness_matrix():
     # Compare with the expected matrix
     assert np.allclose(computed_K_global, expected_K_global, atol=1e-3), "Mismatch in assembled global stiffness matrix"
 
-
-
-
-
-
-
-
-
 # Define test data
 loads = {
     0: [0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -501,3 +493,88 @@ def test_summarize_boundary_conditions(capfd):
     for node, constraints in expected_boundary_conditions.items():
         expected_line = f"Node {node}: Constraints {constraints}"
         assert expected_line in captured, f"Mismatch in boundary conditions output for Node {node}"
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Define test data
+nodes = {
+    0: [0, 0.0, 0.0, 10.0],
+    1: [1, 15.0, 0.0, 10.0],
+    2: [2, 15.0, 0.0, 0.0]
+}
+
+elements = [
+    [0, 1],
+    [1, 2]
+]
+
+element_properties = {
+    0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3},
+    1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
+}
+
+loads = {
+    0: [0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    1: [1, 0.1, 0.05, -0.07, 0.05, -0.1, 0.25],
+    2: [2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+}
+
+supports = {
+    0: [0, 1, 1, 1, 1, 1, 1],  # Node 0: All DOFs constrained
+    1: [1, 0, 0, 0, 0, 0, 0],  # Node 1: All DOFs free
+    2: [2, 1, 1, 1, 0, 0, 0]   # Node 2: First 3 DOFs constrained
+}
+
+# Expected constrained DOFs (Node 0: [0-5], Node 2: [12-14])
+expected_constrained_dofs = [0, 1, 2, 3, 4, 5, 12, 13, 14]
+
+# Expected displacement results
+expected_U_global = np.array([
+    [0.00000000e+00], [0.00000000e+00], [0.00000000e+00], 
+    [0.00000000e+00], [0.00000000e+00], [0.00000000e+00],
+    [2.84049953e-03], [1.43541318e+00], [-1.30609178e-03],
+    [-1.26072079e-01], [-1.67293339e-02], [1.66041318e-01],
+    [0.00000000e+00], [0.00000000e+00], [0.00000000e+00],
+    [-1.52275937e-01], [8.79074190e-03], [1.66041318e-01]
+])
+
+# Expected reaction results
+expected_R_global = np.array([
+    [-0.09468332], [-0.02816345], [0.00469541],
+    [0.16836549], [-0.02359799], [-0.67245177],
+    [0.00000000], [0.00000000], [0.00000000],
+    [0.00000000], [0.00000000], [0.00000000],
+    [-0.00531668], [-0.02183655], [0.06530459],
+    [0.00000000], [0.00000000], [0.00000000]
+])
+
+# Initialize structure, boundary conditions, and solver
+structure = Structure(nodes, elements, element_properties)
+boundary_conditions = BoundaryConditions(loads, supports)
+solver = Solver(structure, boundary_conditions)
+
+def test_get_constrained_dofs():
+    """Test that get_constrained_dofs correctly identifies constrained degrees of freedom."""
+    computed_constrained_dofs = solver.get_constrained_dofs()
+    assert set(computed_constrained_dofs) == set(expected_constrained_dofs), "Mismatch in constrained DOFs"
+
+def test_solve():
+    """Test that the solve function computes the correct displacement vector."""
+    computed_U_global = solver.solve()
+    assert np.allclose(computed_U_global, expected_U_global, atol=1e-3), "Mismatch in computed displacements"
+
+def test_compute_reactions():
+    """Test that the compute_reactions function computes the correct reaction forces."""
+    computed_U_global = solver.solve()
+    computed_R_global = solver.compute_reactions(computed_U_global)
+    assert np.allclose(computed_R_global, expected_R_global, atol=1e-3), "Mismatch in computed reactions"
