@@ -68,3 +68,71 @@ def test_element_length():
 
     # Test zero length (same node)
     assert structure.element_length(0, 0) == pytest.approx(0.0)
+
+def test_display_summary(capfd):
+    nodes = {
+        1: (1, 0.0, 0.0, 0.0),
+        2: (2, 3.0, 4.0, 0.0),
+        3: (3, 1.0, 1.0, 1.0),
+        4: (4, 4.0, 5.0, 6.0)
+    }
+
+    elements = [(1, 2), (3, 4)]  # Two elements
+
+    element_properties = {
+        0: {"E": 200e9, "nu": 0.3, "b": 0.2, "h": 0.4},
+        1: {"E": 150e9, "nu": 0.25, "r": 0.1}
+    }
+
+    structure = Structure(nodes, elements, element_properties)
+    structure.display_summary()
+
+    # Capture printed output
+    captured = capfd.readouterr()
+
+    # Verify the number of elements
+    assert "Number of Elements: 2" in captured.out
+
+    # Check material properties
+    assert "Element 0: 200000000000.0" in captured.out  # E for element 0
+    assert "Element 1: 150000000000.0" in captured.out  # E for element 1
+    assert "Element 0: 0.3" in captured.out  # Poisson's ratio for element 0
+    assert "Element 1: 0.25" in captured.out  # Poisson's ratio for element 1
+
+    # Verify element lengths
+    expected_length_1 = 5.0  # From (0,0,0) to (3,4,0)
+    expected_length_2 = np.sqrt((4 - 1) ** 2 + (5 - 1) ** 2 + (6 - 1) ** 2)
+    
+    assert f"Length: {expected_length_1:.4f}" in captured.out
+    assert f"Length: {expected_length_2:.4f}" in captured.out
+
+    # Check section properties
+    A_rect = 0.2 * 0.4
+    Iy_rect = (0.4 * 0.2**3) / 12
+    Iz_rect = (0.2 * 0.4**3) / 12
+    J_rect = Iy_rect + Iz_rect
+
+    A_circ = math.pi * 0.1**2
+    Iy_circ = (math.pi * 0.1**4) / 4
+    Iz_circ = (math.pi * 0.1**4) / 4
+    J_circ = Iy_circ + Iz_circ
+
+    assert f"Area (A): {A_rect:.4f}" in captured.out
+    assert f"Moment of Inertia Iy: {Iy_rect:.4e}" in captured.out
+    assert f"Moment of Inertia Iz: {Iz_rect:.4e}" in captured.out
+    assert f"Polar Moment of Inertia J: {J_rect:.4e}" in captured.out
+
+    assert f"Area (A): {A_circ:.4f}" in captured.out
+    assert f"Moment of Inertia Iy: {Iy_circ:.4e}" in captured.out
+    assert f"Moment of Inertia Iz: {Iz_circ:.4e}" in captured.out
+    assert f"Polar Moment of Inertia J: {J_circ:.4e}" in captured.out
+
+    # Check node numbering
+    assert "Global Node 1: Coordinates (0.0, 0.0, 0.0)" in captured.out
+    assert "Global Node 2: Coordinates (3.0, 4.0, 0.0)" in captured.out
+    assert "Global Node 3: Coordinates (1.0, 1.0, 1.0)" in captured.out
+    assert "Global Node 4: Coordinates (4.0, 5.0, 6.0)" in captured.out
+
+    # Check connectivity matrix
+    assert "Element 1: [1 2]" in captured.out
+    assert "Element 2: [3 4]" in captured.out
