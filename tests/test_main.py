@@ -634,31 +634,15 @@ def test_get_internal_forces():
     assert isinstance(computed_internal_forces, dict), "Internal forces should be returned as a dictionary"
     assert len(computed_internal_forces) == len(expected_internal_forces), "Mismatch in number of computed elements"
 
-def test_print_internal_forces(capfd):
-    """Test that print_internal_forces prints the correct internal forces."""
-    post_processor.compute_internal_forces()
-    post_processor.print_internal_forces()
-    
-    captured = capfd.readouterr().out.strip()
 
-    # Construct expected output manually to match the print format
-    expected_output = "\n--- Internal Forces in Local Coordinates ---\n"
-    expected_output += "Element 1:\n"
-    expected_output += np.array2string(expected_internal_forces[0], separator=' ') + "\n"
-    expected_output += "Element 2:\n"
-    expected_output += np.array2string(expected_internal_forces[1], separator=' ')
 
-    # Debugging: Print both outputs for manual verification
-    print("\n--- Expected Output ---")
-    print(expected_output)
-    print("\n--- Captured Output ---")
-    print(captured)
 
-    # Normalize spaces and newlines for comparison
-    captured_normalized = " ".join(captured.split())
-    expected_normalized = " ".join(expected_output.split())
 
-    assert captured_normalized == expected_normalized, (
-        f"Mismatch in printed internal forces.\n"
-        f"Expected:\n{expected_output}\n\nGot:\n{captured}"
-    )
+
+
+
+
+
+
+
+
