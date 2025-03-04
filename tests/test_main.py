@@ -497,19 +497,6 @@ def test_print_global_stiffness_matrix(capfd):
     # Ensure printed output matches expected matrix
     assert captured.out.strip() == expected_output.strip(), "Printed global stiffness matrix does not match expected values"
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 def test_compute_global_load_vector():
     # Define loads (node: [node_id, Fx, Fy, Fz, Mx, My, Mz])
     loads = {
@@ -591,3 +578,155 @@ Node 2: Constraints [0, 0, 0, 0, 0, 0]"""
 
     # Ensure printed output matches expected summary
     assert captured.out.strip() == expected_output.strip(), "Printed boundary conditions summary does not match expected output"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    def test_get_constrained_dofs():
+    # Define simple support conditions
+    supports = {
+        0: [0, 1, 1, 1, 0, 0, 0],  # Fixed in x, y, z
+        1: [1, 0, 1, 0, 1, 1, 0],  # Some constraints
+        2: [2, 0, 0, 0, 0, 0, 0]   # Free node
+    }
+
+    # Define dummy loads (not used in this test)
+    loads = {0: [0, 0, 0, 0, 0, 0, 0]}
+
+    # Create boundary conditions object
+    bc = BoundaryConditions(loads, supports)
+
+    # Create a dummy structure (not needed for this test)
+    structure = None  
+
+    # Create solver object
+    solver = Solver(structure, bc)
+
+    # Compute constrained DOFs
+    constrained_dofs = solver.get_constrained_dofs()
+
+    # Expected constrained DOFs
+    expected_constrained_dofs = [
+        0, 1, 2,  # Node 0: x, y, z fixed
+        8, 10, 11 # Node 1: y, rx, ry constrained
+    ]
+
+    # Ensure constrained DOFs match expected values
+    assert sorted(constrained_dofs) == sorted(expected_constrained_dofs), "Constrained DOFs do not match expected values"
+
+def test_solve():
+    # Define nodes
+    nodes = {
+        0: [0, 0.0, 0.0, 10.0],
+        1: [1, 15.0, 0.0, 10.0],
+        2: [2, 15.0, 0.0, 0.0]
+    }
+
+    # Define elements
+    elements = [
+        [0, 1],
+        [1, 2]
+    ]
+
+    # Define element properties
+    element_properties = {
+        0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3},
+        1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
+    }
+
+    # Define loads (only at node 2)
+    loads = {
+        2: [2, 0, -100, 0, 0, 0, 0]  # Load in y-direction
+    }
+
+    # Define supports (node 0 is fully fixed, node 1 is partially fixed)
+    supports = {
+        0: [0, 1, 1, 1, 1, 1, 1],  # Fully fixed
+        1: [1, 0, 1, 0, 1, 1, 0],  # Partially constrained
+        2: [2, 0, 0, 0, 0, 0, 0]   # Free node
+    }
+
+    # Create structure and boundary conditions objects
+    structure = Structure(nodes, elements, element_properties)
+    bc = BoundaryConditions(loads, supports)
+
+    # Create solver object
+    solver = Solver(structure, bc)
+
+    # Compute displacements
+    U_global = solver.solve()
+
+    # Ensure displacement vector has correct shape
+    total_dofs = len(nodes) * 6
+    assert U_global.shape == (total_dofs, 1), "Displacement vector has incorrect shape"
+
+    # Ensure constrained DOFs have zero displacement
+    constrained_dofs = solver.get_constrained_dofs()
+    assert np.allclose(U_global[constrained_dofs], 0), "Constrained DOFs should have zero displacement"
+
+def test_compute_reactions():
+    # Define nodes
+    nodes = {
+        0: [0, 0.0, 0.0, 10.0],
+        1: [1, 15.0, 0.0, 10.0],
+        2: [2, 15.0, 0.0, 0.0]
+    }
+
+    # Define elements
+    elements = [
+        [0, 1],
+        [1, 2]
+    ]
+
+    # Define element properties
+    element_properties = {
+        0: {"b": 0.5, "h": 1.0, "E": 1000, "nu": 0.3},
+        1: {"b": 1.0, "h": 0.5, "E": 1000, "nu": 0.3}
+    }
+
+    # Define loads
+    loads = {
+        2: [2, 0, -100, 0, 0, 0, 0]  # Load in y-direction
+    }
+
+    # Define supports (node 0 is fully fixed, node 1 is partially fixed)
+    supports = {
+        0: [0, 1, 1, 1, 1, 1, 1],  # Fully fixed
+        1: [1, 0, 1, 0, 1, 1, 0],  # Partially constrained
+        2: [2, 0, 0, 0, 0, 0, 0]   # Free node
+    }
+
+    # Create structure and boundary conditions objects
+    structure = Structure(nodes, elements, element_properties)
+    bc = BoundaryConditions(loads, supports)
+
+    # Create solver object
+    solver = Solver(structure, bc)
+
+    # Compute displacements
+    U_global = solver.solve()
+
+    # Compute reactions
+    R_global = solver.compute_reactions(U_global)
+
+    # Ensure reaction force vector has correct shape
+    total_dofs = len(nodes) * 6
+    assert R_global.shape == (total_dofs, 1), "Reaction force vector has incorrect shape"
+
+    # Ensure reactions only exist at constrained DOFs
+    constrained_dofs = solver.get_constrained_dofs()
+    free_dofs = np.setdiff1d(np.arange(total_dofs), constrained_dofs)
+    
+    assert np.allclose(R_global[free_dofs], 0), "Reaction forces should only be at constrained DOFs"
