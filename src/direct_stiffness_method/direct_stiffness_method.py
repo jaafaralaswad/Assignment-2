@@ -544,48 +544,97 @@ class BucklingAnalysis:
 
         return K_reduced, Kg_reduced
 
-    def calculate_critical_load(self, solver):
-        """
-        Calculates the critical load and reconstructs the full global mode shape.
+    # def calculate_critical_load(self, solver):
+    #     """
+    #     Calculates the critical load and reconstructs the full global mode shape.
         
-        Returns:
-            - min_eigenvalue: The minimum positive eigenvalue (critical buckling load).
-            - global_mode_shape: The full eigenvector (mode shape) with zeros at constrained DOFs.
-        """
-        # Compute the global stiffness matrices
-        Kg_global_assembled = self.assemble_global_geometric_stiffness_matrix()
-        K_global_assembled = self.structure.assemble_global_stiffness_matrix()
+    #     Returns:
+    #         - min_eigenvalue: The minimum positive eigenvalue (critical buckling load).
+    #         - global_mode_shape: The full eigenvector (mode shape) with zeros at constrained DOFs.
+    #     """
+    #     # Compute the global stiffness matrices
+    #     Kg_global_assembled = self.assemble_global_geometric_stiffness_matrix()
+    #     K_global_assembled = self.structure.assemble_global_stiffness_matrix()
 
-        # Get constrained DOFs from the solver
-        constrained_dofs = solver.get_constrained_dofs()
-        all_dofs = np.arange(K_global_assembled.shape[0])  # Full DOFs
-        free_dofs = np.setdiff1d(all_dofs, constrained_dofs)  # Free DOFs
+    #     # Get constrained DOFs from the solver
+    #     constrained_dofs = solver.get_constrained_dofs()
+    #     all_dofs = np.arange(K_global_assembled.shape[0])  # Full DOFs
+    #     free_dofs = np.setdiff1d(all_dofs, constrained_dofs)  # Free DOFs
 
-        # Apply boundary conditions
-        K_reduced, Kg_reduced = self.apply_boundary_conditions(K_global_assembled, Kg_global_assembled, constrained_dofs)
+    #     # Apply boundary conditions
+    #     K_reduced, Kg_reduced = self.apply_boundary_conditions(K_global_assembled, Kg_global_assembled, constrained_dofs)
 
-        # Solve the generalized eigenvalue problem
-        eigenvalues, eigenvectors = eigh(K_reduced, -Kg_reduced)
+    #     # Solve the generalized eigenvalue problem
+    #     eigenvalues, eigenvectors = eigh(K_reduced, -Kg_reduced)
 
-        # Extract the smallest positive eigenvalue
-        positive_eigenvalues = eigenvalues[eigenvalues > 0]
+    #     # Extract the smallest positive eigenvalue
+    #     positive_eigenvalues = eigenvalues[eigenvalues > 0]
         
-        if len(positive_eigenvalues) == 0:
-            raise ValueError("No positive eigenvalues found. Check the system setup.")
+    #     if len(positive_eigenvalues) == 0:
+    #         raise ValueError("No positive eigenvalues found. Check the system setup.")
 
-        min_eigenvalue = np.min(positive_eigenvalues)
+    #     min_eigenvalue = np.min(positive_eigenvalues)
 
-        # Find the index of the minimum positive eigenvalue
-        min_index = np.where(eigenvalues == min_eigenvalue)[0][0]
+    #     # Find the index of the minimum positive eigenvalue
+    #     min_index = np.where(eigenvalues == min_eigenvalue)[0][0]
 
-        # Extract the corresponding reduced eigenvector
-        min_eigenvector = eigenvectors[:, min_index]
+    #     # Extract the corresponding reduced eigenvector
+    #     min_eigenvector = eigenvectors[:, min_index]
 
-        # Create the full global mode shape and insert zeros at constrained DOFs
-        global_mode_shape = np.zeros(K_global_assembled.shape[0])
-        global_mode_shape[free_dofs] = min_eigenvector  # Fill only free DOFs
+    #     # Create the full global mode shape and insert zeros at constrained DOFs
+    #     global_mode_shape = np.zeros(K_global_assembled.shape[0])
+    #     global_mode_shape[free_dofs] = min_eigenvector  # Fill only free DOFs
 
-        return min_eigenvalue, global_mode_shape
+    #     return min_eigenvalue, global_mode_shape
+def calculate_critical_load(self, solver):
+    """
+    Calculates the critical load and reconstructs the full global mode shape.
+    
+    Returns:
+        - min_eigenvalue: The minimum positive eigenvalue (critical buckling load).
+        - global_mode_shape: The full eigenvector (mode shape) with zeros at constrained DOFs.
+    """
+    # Compute the global stiffness matrices
+    Kg_global_assembled = self.assemble_global_geometric_stiffness_matrix()
+    K_global_assembled = self.structure.assemble_global_stiffness_matrix()
+
+    # Get constrained DOFs from the solver
+    constrained_dofs = solver.get_constrained_dofs()
+    all_dofs = np.arange(K_global_assembled.shape[0])  # Full DOFs
+    free_dofs = np.setdiff1d(all_dofs, constrained_dofs)  # Free DOFs
+
+    # Apply boundary conditions
+    K_reduced, Kg_reduced = self.apply_boundary_conditions(K_global_assembled, Kg_global_assembled, constrained_dofs)
+
+    # Solve the generalized eigenvalue problem
+    eigenvalues, eigenvectors = eigh(K_reduced, -Kg_reduced)
+
+    # Extract the smallest positive eigenvalue
+    positive_eigenvalues = eigenvalues[eigenvalues > 0]
+    
+    if len(positive_eigenvalues) == 0:
+        raise ValueError("No positive eigenvalues found. Check the system setup.")
+
+    min_eigenvalue = np.min(positive_eigenvalues)
+
+    # Find the index of the minimum positive eigenvalue
+    min_index = np.where(eigenvalues == min_eigenvalue)[0][0]
+
+    # Extract the corresponding reduced eigenvector
+    min_eigenvector = eigenvectors[:, min_index]
+
+    # Normalize the eigenvector to ensure consistent magnitude
+    min_eigenvector /= np.linalg.norm(min_eigenvector)
+
+    # Enforce a consistent sign convention (ensuring the largest absolute entry is positive)
+    if min_eigenvector[np.argmax(np.abs(min_eigenvector))] < 0:
+        min_eigenvector *= -1
+
+    # Create the full global mode shape and insert zeros at constrained DOFs
+    global_mode_shape = np.zeros(K_global_assembled.shape[0])
+    global_mode_shape[free_dofs] = min_eigenvector  # Fill only free DOFs
+
+    return min_eigenvalue, global_mode_shape
 
 
 class PlotResults:
