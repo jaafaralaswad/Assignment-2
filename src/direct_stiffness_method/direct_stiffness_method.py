@@ -651,7 +651,7 @@ class PlotResults:
         self.U_global = U_global
         self.scale = scale  # Scaling factor for deformation
 
-    def hermite_interpolation(self, u1, theta1, u2, theta2, L, num_points=500):
+    def hermite_interpolation(self, u1, theta1, u2, theta2, L, num_points=20):
         """
         Performs Hermite cubic interpolation for bending displacements.
 
