@@ -352,14 +352,6 @@ def test_compute_global_load_vector():
     # Assert that computed and expected values match
     np.testing.assert_array_almost_equal(F_global, expected_F_global)
 
-
-
-
-
-
-
-
-
 def test_solver():
     # Define nodes
     nodes = {
@@ -459,3 +451,90 @@ def test_solver():
     # Check reaction forces
     np.testing.assert_allclose(R_global, expected_R_global, rtol=1e-5, atol=1e-5)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def test_compute_internal_forces():
+    # Define nodes
+    nodes = {
+        0: [0, 0.0, 0.0, 0.0],
+        1: [1, 3.0, 9.333333333, 7.333333333],
+        2: [2, 6.0, 18.66666667, 14.66666667],
+    }
+
+    # Define elements
+    elements = [
+        [0, 1],
+        [1, 2],
+    ]
+
+    # Define element properties
+    element_properties = {
+        0: {"r": 1.0, "E": 10000, "nu": 0.3},
+        1: {"r": 1.0, "E": 10000, "nu": 0.3},
+    }
+
+    # Initialize structure
+    structure = Structure(nodes, elements, element_properties)
+
+    # Define loads
+    loads = {
+        0: [0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        1: [1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        2: [2, 0.05, -0.1, 0.23, 0.1, -0.025, -0.08]    
+    }
+
+    # Define supports
+    supports = {
+        0: [0, 1, 1, 1, 1, 1, 1],
+        1: [1, 0, 0, 0, 0, 0, 0],
+        2: [2, 0, 0, 0, 0, 0, 0],
+    }
+
+    # Initialize boundary conditions
+    bc = BoundaryConditions(loads, supports)
+
+    # Initialize solver and solve for displacements
+    solver = Solver(structure, bc)
+    U_global = solver.solve()
+
+    # Perform buckling analysis
+    buckling_analysis = BucklingAnalysis(structure, solver, U_global)
+    internal_forces = buckling_analysis.internal_forces
+
+    # Expected internal forces
+    expected_internal_forces = {
+        0: np.array([ 1.00000000e+00, -4.67682450e-10, -8.53716865e-11,  1.86581954e-16,
+                       6.73220874e-09, -3.49667949e-08, -1.00000000e+00,  4.67682450e-10,
+                       8.53716865e-11, -1.86581954e-16, -5.68701071e-09,  2.92409999e-08]),
+        1: np.array([ 1.00000000e+00, -5.67661704e-10, -1.60683099e-10,  1.85863289e-16,
+                       5.68701070e-09, -2.92409999e-08, -1.00000000e+00,  5.67661704e-10,
+                       1.60683099e-10, -1.85863289e-16, -3.71978170e-09,  2.22911678e-08]),
+        2: np.array([ 1.00000000e+00, -3.92698073e-10, -2.88882234e-11,  2.12524527e-16,
+                       3.71978169e-09, -2.22911679e-08, -1.00000000e+00,  3.92698073e-10,
+                       2.88882234e-11, -2.12524527e-16, -3.36610572e-09,  1.74834000e-08]),
+        3: np.array([ 1.00000000e+00, -3.92698134e-10, -2.88880595e-11,  1.76681182e-16,
+                       3.36610575e-09, -1.74834001e-08, -1.00000000e+00,  3.92698134e-10,
+                       2.88880595e-11, -1.76681182e-16, -3.01243178e-09,  1.26756315e-08]),
+        4: np.array([ 1.00000000e+00, -6.42646229e-10, -2.17167308e-10,  1.61366379e-16,
+                       3.01243178e-09, -1.26756315e-08, -1.00000000e+00,  6.42646229e-10,
+                       2.17167308e-10, -1.61366379e-16, -3.53671592e-10,  4.80777038e-09]),
+        5: np.array([ 1.00000000e+00, -3.92698245e-10, -2.88878421e-11,  1.07796531e-16,
+                       3.53671551e-10, -4.80777063e-09, -1.00000000e+00,  3.92698245e-10,
+                       2.88878421e-11, -1.07796531e-16, -2.49202677e-16,  6.59562327e-16]),
+    }
+
+    # Check internal forces for each element
+    for elem_id, expected_forces in expected_internal_forces.items():
+        np.testing.assert_allclose(internal_forces[elem_id], expected_forces, rtol=1e-5, atol=1e-5)
