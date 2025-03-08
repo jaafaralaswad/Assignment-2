@@ -234,8 +234,8 @@ def test_compute_global_stiffness_matrix():
     # Compute global stiffness matrix
     K_global = structure.compute_global_stiffness_matrix()
 
-    # Expected result (fully hardcoded)
-    expected_K_global = np.array(
+    # Expected result
+    expected_K_global = np.array([
         [ 2.02352366e+02,  4.69756988e+02,  3.69094776e+02,  5.70847168e-15,
    1.88316510e+02, -2.39675559e+02, -2.02352366e+02, -4.69756988e+02,
   -3.69094776e+02,  5.70847168e-15,  1.88316510e+02, -2.39675559e+02,
@@ -344,7 +344,7 @@ def test_compute_global_stiffness_matrix():
   2.39675558e+02, -7.70385723e+01,  0.00000000e+00, -3.04203593e+02,  
  -9.46411179e+02,  1.82244144e+03,]
 
-    )
+    ])
 
     # Compare matrices with tolerance to handle floating-point errors
     np.testing.assert_allclose(K_global, expected_K_global, rtol=1e-5, atol=1e-5)
