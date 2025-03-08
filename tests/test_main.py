@@ -323,3 +323,35 @@ def test_compute_global_stiffness_matrix():
     np.testing.assert_allclose(K_global, expected_K_global, rtol=1e-5, atol=1e-5)
 
 
+
+
+
+
+
+def test_compute_global_load_vector():
+    # Define test loads
+    loads = {
+        0: [0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        1: [1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        2: [2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        3: [3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        4: [4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        5: [5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        6: [6, 0.05, -0.1, 0.23, 0.1, -0.025, -0.08]
+    }
+
+    # No supports needed for this test
+    supports = {}
+
+    # Initialize BoundaryConditions class
+    bc = BoundaryConditions(loads, supports)
+
+    # Compute global load vector
+    F_global = bc.compute_global_load_vector()
+
+    # Define expected output
+    expected_F_global = np.zeros((bc.n_nodes * 6, 1))
+    expected_F_global[36:42, 0] = [0.05, -0.1, 0.23, 0.1, -0.025, -0.08]
+
+    # Assert that computed and expected values match
+    np.testing.assert_array_almost_equal(F_global, expected_F_global)
