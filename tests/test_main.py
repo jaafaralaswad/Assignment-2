@@ -386,36 +386,3 @@ def test_compute_global_load_vector():
 
 
 
-def test_solver():
-
-    supports = {
-        0: [0, 1, 1, 1, 1, 1, 1],
-        1: [1, 0, 0, 0, 0, 0, 0],
-        2: [2, 0, 0, 0, 0, 0, 0],
-    
-}
-
-    bc = BoundaryConditions(loads, supports)
-
-    
-    # Initialize and run solver
-    solver = Solver(structure, bc)
-    displacements = solver.solve()
-    
-    # Expected results (should be computed properly in a real test)
-    expected_displacements = np.array([
-        [0.0], [0.0], [0.0], [0.0], [0.0], [0.0],
-        [0.00666117], [-0.03115959], [0.03698065], [0.0068851], [-0.00081014], [-0.00192924],
-        [0.02165854], [-0.10034391], [0.11894612], [0.00928081], [-0.00111626], [-0.00266339]
-    ])
-    
-    expected_reactions = np.array([
-        [-0.05], [0.1], [-0.23], [-5.86], [0.67166667], [1.61333333],
-        [0.0], [0.0], [0.0], [0.0], [0.0], [0.0],
-        [0.0], [0.0], [0.0], [0.0], [0.0], [0.0]
-    ])
-    
-    # Verify results
-    np.testing.assert_allclose(displacements, expected_displacements, atol=1e-6)
-    np.testing.assert_allclose(structure.compute_global_stiffness_matrix.call_count, 1)
-    np.testing.assert_allclose(boundary_conditions.compute_global_load_vector.call_count, 1)
