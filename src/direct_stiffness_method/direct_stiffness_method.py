@@ -405,9 +405,6 @@ class BucklingAnalysis:
         # Extract the smallest positive eigenvalue
         positive_eigenvalues = eigenvalues[eigenvalues > 0]
         
-        if len(positive_eigenvalues) == 0:
-            raise ValueError("No positive eigenvalues found. Check the system setup.")
-
         min_eigenvalue = np.min(positive_eigenvalues)
 
         # Find the index of the minimum positive eigenvalue
