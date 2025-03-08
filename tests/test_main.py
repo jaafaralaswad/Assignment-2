@@ -361,24 +361,53 @@ def test_compute_global_load_vector():
 
 
 def test_solver():
-    # Define mock structure
-    structure = Mock()
-    structure.compute_global_stiffness_matrix.return_value = np.array([
-        [10, -10],
-        [-10, 20]
-    ])  # Example stiffness matrix
-    
-    # Define mock boundary conditions
-    boundary_conditions = Mock()
-    boundary_conditions.compute_global_load_vector.return_value = np.array([0.05, -0.1])
-    boundary_conditions.supports = {
+
+    nodes = {
+        0: [0, 0.0, 0.0, 0.0],
+        1: [1, 3.0, 9.333333333, 7.333333333],
+        2: [2, 6.0, 18.66666667, 14.66666667],
+    }
+
+    # Define elements
+    elements = [
+        [0, 1],
+        [1, 2],
+    ]
+
+    # Define element properties
+    element_properties = {
+        0: {"r": 1.0, "E": 10000, "nu": 0.3},
+        1: {"r": 1.0, "E": 10000, "nu": 0.3},
+    }
+
+    # Initialize structure
+    structure = Structure(nodes, elements, element_properties)
+
+    # Compute global stiffness matrix
+    K_global = structure.compute_global_stiffness_matrix()
+
+    loads = {
+        0: [0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        1: [1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        2: [2, 0.05, -0.1, 0.23, 0.1, -0.025, -0.08]    
+    }
+
+    # Define supports [#, ux, uy, uz, theta_x, theta_y, theta_z]
+    # 1 means constrained dof
+    # 0 means free dof
+
+    supports = {
         0: [0, 1, 1, 1, 1, 1, 1],
         1: [1, 0, 0, 0, 0, 0, 0],
         2: [2, 0, 0, 0, 0, 0, 0],
-    }
+    
+}
+
+    bc = BoundaryConditions(loads, supports)
+
     
     # Initialize and run solver
-    solver = Solver(structure, boundary_conditions)
+    solver = Solver(structure, bc)
     displacements = solver.solve()
     
     # Expected results (should be computed properly in a real test)
