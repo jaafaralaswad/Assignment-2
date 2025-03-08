@@ -5,6 +5,8 @@ import pytest
 # Import functions
 from direct_stiffness_method.direct_stiffness_method import Structure, StiffnessMatrices, BoundaryConditions, Solver, BucklingAnalysis, PlotResults, rotation_matrix_3D, transformation_matrix_3D
 
+# Testing based on examples solved using spreadsheets and matlab as well as problems confirmed to be true in class
+
 # Testing Class Structure for rectangular and circular cross-sections
 
 # Define test data
