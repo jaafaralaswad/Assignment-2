@@ -96,6 +96,10 @@ Depending on which tutorial you want to use, you should run one of the following
 jupyter notebook direct_stiffness_method.ipynb
 ```
 
+```bash
+jupyter notebook technical_correctness_check.ipynb
+```
+
 A Jupyter notebook will pop up.
 
 
