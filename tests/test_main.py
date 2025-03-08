@@ -182,31 +182,6 @@ def test_local_elastic_stiffness_matrix_3D_beam(elem_id, expected_matrix):
     assert np.allclose(computed_matrix, expected_matrix, atol=1e-3), f"Mismatch in stiffness matrix for element {elem_id}"
 
 
-
-
-
-
-
-
-
-
-# TEST A PROBLEM
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def test_compute_global_stiffness_matrix():
     # Define nodes
     nodes = {
@@ -385,4 +360,102 @@ def test_compute_global_load_vector():
 
 
 
+def test_solver():
+    # Define nodes
+    nodes = {
+        0: [0, 0.0, 0.0, 0.0],
+        1: [1, 3.0, 9.333333333, 7.333333333],
+        2: [2, 6.0, 18.66666667, 14.66666667],
+    }
+
+    # Define elements
+    elements = [
+        [0, 1],
+        [1, 2],
+    ]
+
+    # Define element properties
+    element_properties = {
+        0: {"r": 1.0, "E": 10000, "nu": 0.3},
+        1: {"r": 1.0, "E": 10000, "nu": 0.3},
+    }
+
+    # Initialize structure
+    structure = Structure(nodes, elements, element_properties)
+
+    # Define loads
+    loads = {
+        0: [0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        1: [1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        2: [2, 0.05, -0.1, 0.23, 0.1, -0.025, -0.08]    
+    }
+
+    # Define supports
+    supports = {
+        0: [0, 1, 1, 1, 1, 1, 1],
+        1: [1, 0, 0, 0, 0, 0, 0],
+        2: [2, 0, 0, 0, 0, 0, 0],
+    }
+
+    # Initialize boundary conditions
+    bc = BoundaryConditions(loads, supports)
+
+    # Initialize solver
+    solver = Solver(structure, bc)
+
+    # Solve for displacements
+    U_global = solver.solve()
+
+    # Expected displacements
+    expected_U_global = np.array([
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.00666117],
+        [-0.03115959],
+        [ 0.03698065],
+        [ 0.0068851 ],
+        [-0.00081014],
+        [-0.00192924],
+        [ 0.02165854],
+        [-0.10034391],
+        [ 0.11894612],
+        [ 0.00928081],
+        [-0.00111626],
+        [-0.00266339],
+    ])
+
+    # Check displacements
+    np.testing.assert_allclose(U_global, expected_U_global, rtol=1e-5, atol=1e-5)
+
+    # Compute reaction forces
+    R_global = solver.compute_reactions(U_global)
+
+    # Expected reaction forces
+    expected_R_global = np.array([
+        [-0.05      ],
+        [ 0.1       ],
+        [-0.23      ],
+        [-5.86      ],
+        [ 0.67166667],
+        [ 1.61333333],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ],
+        [ 0.        ]
+    ])
+
+    # Check reaction forces
+    np.testing.assert_allclose(R_global, expected_R_global, rtol=1e-5, atol=1e-5)
 
