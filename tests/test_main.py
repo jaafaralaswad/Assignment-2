@@ -181,33 +181,6 @@ def test_local_elastic_stiffness_matrix_3D_beam(elem_id, expected_matrix):
     # Compare with expected matrix
     assert np.allclose(computed_matrix, expected_matrix, atol=1e-3), f"Mismatch in stiffness matrix for element {elem_id}"
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def test_compute_global_stiffness_matrix():
     # Define nodes
     nodes = {
@@ -348,3 +321,5 @@ def test_compute_global_stiffness_matrix():
 
     # Compare matrices with tolerance to handle floating-point errors
     np.testing.assert_allclose(K_global, expected_K_global, rtol=1e-5, atol=1e-5)
+
+
