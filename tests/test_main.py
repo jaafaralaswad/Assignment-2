@@ -451,20 +451,6 @@ def test_solver():
     # Check reaction forces
     np.testing.assert_allclose(R_global, expected_R_global, rtol=1e-5, atol=1e-5)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def test_compute_internal_forces():
     # Define nodes
     nodes = {
@@ -561,3 +547,84 @@ def test_compute_internal_forces():
         np.testing.assert_allclose(internal_forces[elem_id], expected_forces, rtol=1e-5, atol=1e-5)
 
 
+
+
+
+
+
+
+
+
+def test_calculate_critical_load():
+    # Define nodes
+    nodes = {
+        0: [0, 0.0, 0.0, 0.0],
+        1: [1, 3.0, 9.333333333, 7.333333333],
+        2: [2, 6.0, 18.66666667, 14.66666667],
+    }
+
+    # Define elements
+    elements = [
+        [0, 1],
+        [1, 2],
+    ]
+
+    # Define element properties
+    element_properties = {
+        0: {"r": 1.0, "E": 10000, "nu": 0.3},
+        1: {"r": 1.0, "E": 10000, "nu": 0.3},
+    }
+
+    # Initialize structure
+    structure = Structure(nodes, elements, element_properties)
+
+    # Define loads
+    loads = {
+        0: [0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        1: [1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        2: [2, 0.05, -0.1, 0.23, 0.1, -0.025, -0.08]    
+    }
+
+    # Define supports
+    supports = {
+        0: [0, 1, 1, 1, 1, 1, 1],
+        1: [1, 0, 0, 0, 0, 0, 0],
+        2: [2, 0, 0, 0, 0, 0, 0],
+    }
+
+    # Initialize boundary conditions
+    bc = BoundaryConditions(loads, supports)
+
+    # Initialize solver and solve for displacements
+    solver = Solver(structure, bc)
+    U_global = solver.solve()
+
+    # Perform buckling analysis
+    buckling_analysis = BucklingAnalysis(structure, solver, U_global)
+
+    # Compute critical load and eigenmode
+    P_critical, global_mode_shape = buckling_analysis.calculate_critical_load(solver)
+
+    # Expected critical load
+    expected_P_critical = 3.591373037735191
+
+    # Expected eigenmode
+    expected_global_mode_shape = np.array([
+        0.00000000e+00,  0.00000000e+00,  0.00000000e+00,  0.00000000e+00,
+        0.00000000e+00,  0.00000000e+00, -2.39295784e-02,  4.75572038e-03,
+        3.73663794e-03,  6.13711552e-11, -2.47684734e-03,  3.15235114e-03,
+        -9.40875523e-02,  1.86987871e-02,  1.46919061e-02,  1.18577269e-10,
+        -4.78490163e-03,  6.08987476e-03, -2.05692772e-01,  4.08790030e-02,
+        3.21192209e-02,  1.67679393e-10, -6.76687278e-03,  8.61238347e-03,
+        -3.51139525e-01,  6.97848233e-02,  5.48309399e-02,  2.05346105e-10,
+        -8.28769273e-03,  1.05479725e-02, -5.20515858e-01,  1.03446364e-01,
+        8.12792967e-02,  2.29043821e-10, -9.24372012e-03,  1.17647346e-02,
+        -7.02279051e-01,  1.39569647e-01,  1.09661880e-01,  2.37128915e-10,
+        -9.56980326e-03,  1.21797495e-02
+    ])
+
+    # Check critical load
+    np.testing.assert_allclose(P_critical, expected_P_critical, rtol=1e-5, atol=1e-5)
+
+    # Check eigenmode
+    np.testing.assert_allclose(global_mode_shape, expected_global_mode_shape, rtol=1e-5, atol=1e-5)
