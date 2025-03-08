@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.linalg import eigh
 
-
 class Structure:
     def __init__(self, nodes, elements, element_properties):
         self.nodes = nodes
@@ -40,40 +39,6 @@ class Structure:
         x1, y1, z1 = self.nodes[node1][1:]
         x2, y2, z2 = self.nodes[node2][1:]
         return np.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
-
-    def display_summary(self):
-        print("--- Structure Summary ---")
-        print(f"Number of Elements: {len(self.elements)}")
-        print("Elasticity Modulus (E):")
-        for elem_id, E in self.E.items():
-            print(f"  Element {elem_id}: {E}")
-        
-        print("\nPoisson's Ratio (nu):")
-        for elem_id, nu in self.nu.items():
-            print(f"  Element {elem_id}: {nu}")
-
-        print("\n--- Element Properties ---")
-        for i, (n1, n2) in enumerate(self.elements):
-            length = self.element_length(n1, n2)
-            A, Iy, Iz, J = self.compute_section_properties(i)
-
-            print(f"Element {i + 1}:")
-            print(f"  Length: {length:.4f}")
-            print(f"  Area (A): {A:.4f}")
-            print(f"  Moment of Inertia Iy: {Iy:.4f}")
-            print(f"  Moment of Inertia Iz: {Iz:.4f}")
-            print(f"  Polar Moment of Inertia J: {J:.4f}")
-            print(f"  Node 1: {tuple(self.nodes[n1][1:])}, Node 2: {tuple(self.nodes[n2][1:])}\n")
-
-        print("--- Connectivity Matrix ---")
-        for i, (n1, n2) in enumerate(self.elements, 1):
-            print(f"Element {i}: [{n1} {n2}]")
-        
-        print("\nGlobal Node Numbering:")
-        for num, data in self.nodes.items():
-            print(f"Global Node {num}: Coordinates {tuple(data[1:])}")
-
-        print("\n* * * * * * * * * *")
 
     def local_elastic_stiffness_matrix_3D_beam(self, elem_id, L):
         """
@@ -148,19 +113,31 @@ class Structure:
             stiffness_matrices[i] = self.local_elastic_stiffness_matrix_3D_beam(i, L)
         return stiffness_matrices
     
-    def compute_global_stiffness_matrices(self):
+    def compute_global_stiffness_matrix(self):
+        """Compute and assemble the global stiffness matrix."""
+        local_stiffness_matrices = self.compute_local_stiffness_matrices()
+        stiffness_handler = StiffnessMatrices(self)
+        
+        # Map to global stiffness matrices
+        global_stiffness_matrices = stiffness_handler.compute_global_stiffness_matrices(local_stiffness_matrices)
+        
+        # Assemble the final global stiffness matrix
+        return stiffness_handler.assemble_global_stiffness_matrix(global_stiffness_matrices)
+    
+class StiffnessMatrices:
+    def __init__(self, structure):
+        self.structure = structure
+    
+    def compute_global_stiffness_matrices(self, local_stiffness_matrices):
         """
         Computes the global stiffness matrices by mapping local stiffness matrices from local to global coordinates.
-        The transformation is given by: k_global = Gamma^T * k_local * Gamma,
-        where Gamma is the 12x12 transformation matrix derived from the 3x3 rotation matrix.
         """
         global_stiffness_matrices = {}
-        local_stiffness_matrices = self.compute_local_stiffness_matrices()
-
-        for i, (n1, n2) in enumerate(self.elements):
+        
+        for i, (n1, n2) in enumerate(self.structure.elements):
             # Obtain nodal coordinates
-            x1, y1, z1 = self.nodes[n1][1:]
-            x2, y2, z2 = self.nodes[n2][1:]
+            x1, y1, z1 = self.structure.nodes[n1][1:]
+            x2, y2, z2 = self.structure.nodes[n2][1:]
 
             # Compute the 3x3 rotation matrix
             gamma = rotation_matrix_3D(x1, y1, z1, x2, y2, z2)
@@ -174,38 +151,25 @@ class Structure:
             global_stiffness_matrices[i] = k_global
 
         return global_stiffness_matrices
-
-
-    def assemble_global_stiffness_matrix(self):
+    
+    def assemble_global_stiffness_matrix(self, global_stiffness_matrices):
         """
-        Assembles the overall global stiffness matrix from all element global stiffness matrices.
+        Assembles the global stiffness matrix from element stiffness matrices.
         """
-        n_global_nodes = len(self.nodes)  # FIXED
+        n_global_nodes = len(self.structure.nodes)
         total_dofs = n_global_nodes * 6
         K_global_assembled = np.zeros((total_dofs, total_dofs))
 
-        # Get the global stiffness matrices for each element
-        global_stiffness_matrices = self.compute_global_stiffness_matrices()
+        for elem_idx, (node1, node2) in enumerate(self.structure.elements):
+            # Global DOF indices for the element
+            dofs = np.r_[node1 * 6 : node1 * 6 + 6, node2 * 6 : node2 * 6 + 6]
 
-        for elem_idx, (node1, node2) in enumerate(self.elements):  # FIXED
-            # Determine the corresponding global DOF indices
-            dofs = np.concatenate((
-                np.arange(node1 * 6, node1 * 6 + 6),
-                np.arange(node2 * 6, node2 * 6 + 6)
-            ))
-            # Add the element's contribution into the overall global stiffness matrix
+            # Assemble element stiffness into global matrix
             k_global = global_stiffness_matrices[elem_idx]
-            for i_local in range(12):
-                global_i = dofs[i_local]
-                for j_local in range(12):
-                    global_j = dofs[j_local]
-                    K_global_assembled[global_i, global_j] += k_global[i_local, j_local]
+            K_global_assembled[np.ix_(dofs, dofs)] += k_global
 
         return K_global_assembled
-
-
-
-
+    
 class BoundaryConditions:
     def __init__(self, loads, supports):
         """
@@ -227,25 +191,6 @@ class BoundaryConditions:
             F_global[dof_index:dof_index + 6, 0] = values[1:]  # Skip the node number
                 
         return F_global
-    
-    def print_global_load_vector(self):
-        """
-        Prints the global load vector.
-        """
-        F_global = self.compute_global_load_vector()
-        print("\n--- External Load Vector ---")
-        print(F_global)
-
-    def summarize_boundary_conditions(self):
-        """
-        Summarizes the boundary conditions by showing which DOFs are constrained (1) and free (0).
-        """
-        print("\n--- Boundary Conditions ---")
-        for node, values in self.supports.items():
-            print(f"Node {node}: Constraints {values[1:]}")
-
-
-
 
 class Solver:
     def __init__(self, structure, boundary_conditions):
@@ -254,32 +199,20 @@ class Solver:
         """
         self.structure = structure
         self.boundary_conditions = boundary_conditions
-
-    def get_constrained_dofs(self):
-        """
-        Extracts the constrained degrees of freedom (DOFs) from the support conditions.
-        """
-        constrained_dofs = []
-        for node, constraints in self.boundary_conditions.supports.items():
-            node_index = node * 6  # Each node has 6 DOFs
-            for dof in range(6):
-                if constraints[dof + 1] == 1:  # Skip the node index (first element)
-                    constrained_dofs.append(node_index + dof)
-        return constrained_dofs
-
+    
     def solve(self):
         """
         Solves for the unknown displacements by reducing the global system and solving:
         U_reduced = K_reduced^-1 * F_reduced.
         """
-        # Step 1: Get full system matrices
-        K_global = self.structure.assemble_global_stiffness_matrix()
+        # Step 1: Assemble global matrices
+        K_global = self.structure.compute_global_stiffness_matrix()
         F_global = self.boundary_conditions.compute_global_load_vector()
 
-        # Step 2: Identify constrained DOFs
-        constrained_dofs = self.get_constrained_dofs()
-        all_dofs = np.arange(K_global.shape[0])
-        free_dofs = np.setdiff1d(all_dofs, constrained_dofs)
+        # Step 2: Identify constrained DOFs directly
+        constrained_dofs = {node * 6 + dof for node, constraints in self.boundary_conditions.supports.items()
+                            for dof in range(6) if constraints[dof + 1] == 1}
+        free_dofs = np.setdiff1d(np.arange(K_global.shape[0]), list(constrained_dofs))
 
         # Step 3: Extract the reduced system
         K_reduced = K_global[np.ix_(free_dofs, free_dofs)]
@@ -289,42 +222,37 @@ class Solver:
         U_reduced = np.linalg.solve(K_reduced, F_reduced)
 
         # Step 5: Reassemble full displacement vector
-        U_global = np.zeros((K_global.shape[0], 1))
+        U_global = np.zeros_like(F_global)
         U_global[free_dofs] = U_reduced
 
-        print("\n--- Computed Displacements ---")
-        print(U_global)
-
         return U_global
-
+    
     def compute_reactions(self, U_global):
         """
         Computes reaction forces at constrained degrees of freedom.
         """
-        K_global = self.structure.assemble_global_stiffness_matrix()
-        F_global = self.boundary_conditions.compute_global_load_vector()
-        constrained_dofs = self.get_constrained_dofs()
-
+        K_global = self.structure.compute_global_stiffness_matrix()
+        constrained_dofs = {node * 6 + dof for node, constraints in self.boundary_conditions.supports.items()
+                            for dof in range(6) if constraints[dof + 1] == 1}
+        
         # Compute reaction forces at constrained DOFs
-        R_global = np.zeros((K_global.shape[0], 1))
-        R_global[constrained_dofs] = K_global[np.ix_(constrained_dofs,)] @ U_global
-
-        print("\n--- Computed Reactions ---")
-        print(R_global)
+        R_global = np.zeros_like(U_global)
+        R_global[list(constrained_dofs)] = K_global[list(constrained_dofs)] @ U_global
 
         return R_global
 
-
-
-class PostProcessing:
-    def __init__(self, structure, U_global):
+class BucklingAnalysis:
+    def __init__(self, structure, solver, U_global):
+        """
+        Initializes the buckling analysis with the structure and computed internal forces.
+        """
         self.structure = structure
         self.U_global = U_global
-        self.internal_forces = {}
+        self.internal_forces = self.compute_internal_forces()
 
     def compute_internal_forces(self):
         """Compute internal forces for each element."""
-        self.internal_forces = {} 
+        internal_forces = {}
 
         for elem_id, (node_i, node_j) in enumerate(self.structure.elements):
             # Extract global displacements for the element
@@ -347,29 +275,9 @@ class PostProcessing:
             k_local = self.structure.local_elastic_stiffness_matrix_3D_beam(elem_id, L)
 
             # Compute internal forces in local coordinates
-            self.internal_forces[elem_id] = k_local @ Ue_local
-
-    def get_internal_forces(self):
-        """Return the computed internal forces."""
-        return self.internal_forces
-
-    def print_internal_forces(self):
-        """Print internal forces for each element."""
-        print("\n--- Internal Forces in Local Coordinates ---")
-        for elem_id, forces in self.internal_forces.items():
-            print(f"Element {elem_id + 1}:")
-            print(forces)
-
-
-
-
-class BucklingAnalysis:
-    def __init__(self, structure, solver, post_processing):
-        """
-        Initializes the buckling analysis with the structure and computed internal forces.
-        """
-        self.structure = structure
-        self.internal_forces = post_processing.get_internal_forces()
+            internal_forces[elem_id] = k_local @ Ue_local
+        
+        return internal_forces
 
     def local_geometric_stiffness_matrix_3D_beam(self, elem_id, L):
         """
@@ -459,133 +367,17 @@ class BucklingAnalysis:
             geometric_stiffness_matrices[i] = self.local_geometric_stiffness_matrix_3D_beam(i, L)
         return geometric_stiffness_matrices
     
-    # def print_local_stiffness_matrices(self):
-    #     """
-    #     Prints the local geometric stiffness matrices for all elements.
-    #     """
-    #     local_stiffness_matrices = self.compute_local_geometric_stiffness_matrices()
-    #     for elem_id, k_local in local_stiffness_matrices.items():
-    #         print(f"Local geometric stiffness matrix for element {elem_id}:")
-    #         print(k_local)
-    #         print("\n")
-
-    def compute_global_geometric_stiffness_matrices(self):
-        """
-        Computes the global stiffness matrices by mapping local stiffness matrices from local to global coordinates.
-        The transformation is given by: k_global = Gamma^T * k_local * Gamma,
-        where Gamma is the 12x12 transformation matrix derived from the 3x3 rotation matrix.
-        """
-        global_geometric_stiffness_matrices = {}
+    def compute_global_geometric_stiffness_matrix(self):
+        """Compute and assemble the global geometric stiffness matrix."""
         local_geometric_stiffness_matrices = self.compute_local_geometric_stiffness_matrices()
+        stiffness_handler = StiffnessMatrices(self.structure)  # FIXED! Pass structure
 
-        for i, (n1, n2) in enumerate(self.structure.elements):
-            # Obtain nodal coordinates
-            x1, y1, z1 = self.structure.nodes[n1][1:]
-            x2, y2, z2 = self.structure.nodes[n2][1:]
+        # Map to global stiffness matrices
+        global_geometric_stiffness_matrices = stiffness_handler.compute_global_stiffness_matrices(local_geometric_stiffness_matrices)
 
-            # Compute the 3x3 rotation matrix
-            gamma = rotation_matrix_3D(x1, y1, z1, x2, y2, z2)
+        # Assemble the final global stiffness matrix
+        return stiffness_handler.assemble_global_stiffness_matrix(global_geometric_stiffness_matrices)
 
-            # Compute the 12x12 transformation matrix
-            Gamma = transformation_matrix_3D(gamma)
-
-            # Transform the local stiffness matrix to global coordinates
-            kg_local = local_geometric_stiffness_matrices[i]
-            kg_global = Gamma.T @ kg_local @ Gamma
-            global_geometric_stiffness_matrices[i] = kg_global
-
-        return global_geometric_stiffness_matrices
-
-    def assemble_global_geometric_stiffness_matrix(self):
-        """
-        Assembles the overall global geometric stiffness matrix from all element global geometric stiffness matrices.
-        """
-        n_global_nodes = len(self.structure.nodes)  # FIXED
-        total_dofs = n_global_nodes * 6
-        Kg_global_assembled = np.zeros((total_dofs, total_dofs))
-
-        # Get the global stiffness matrices for each element
-        global_geometric_stiffness_matrices = self.compute_global_geometric_stiffness_matrices()
-
-        for elem_idx, (node1, node2) in enumerate(self.structure.elements):  # FIXED
-            # Determine the corresponding global DOF indices
-            dofs = np.concatenate((
-                np.arange(node1 * 6, node1 * 6 + 6),
-                np.arange(node2 * 6, node2 * 6 + 6)
-            ))
-            # Add the element's contribution into the overall global stiffness matrix
-            kg_global = global_geometric_stiffness_matrices[elem_idx]
-            for i_local in range(12):
-                global_i = dofs[i_local]
-                for j_local in range(12):
-                    global_j = dofs[j_local]
-                    Kg_global_assembled[global_i, global_j] += kg_global[i_local, j_local]
-
-        return Kg_global_assembled
-
-    # def print_global_stiffness_matrix(self):
-    #     Kg_global_assembled = self.assemble_global_geometric_stiffness_matrix()
-    #     print(Kg_global_assembled)
-
-
-    def apply_boundary_conditions(self, K, Kg, constrained_dofs):
-        """
-        Removes rows and columns corresponding to constrained DOFs.
-        K: Global stiffness matrix
-        Kg: Global geometric stiffness matrix
-        constrained_dofs: List of global DOF indices that are fixed
-        """
-        # Convert to NumPy arrays for easy indexing
-        free_dofs = np.setdiff1d(np.arange(K.shape[0]), constrained_dofs)
-
-        # Extract submatrices for free DOFs
-        K_reduced = K[np.ix_(free_dofs, free_dofs)]
-        Kg_reduced = Kg[np.ix_(free_dofs, free_dofs)]
-
-        return K_reduced, Kg_reduced
-
-    # def calculate_critical_load(self, solver):
-    #     """
-    #     Calculates the critical load and reconstructs the full global mode shape.
-        
-    #     Returns:
-    #         - min_eigenvalue: The minimum positive eigenvalue (critical buckling load).
-    #         - global_mode_shape: The full eigenvector (mode shape) with zeros at constrained DOFs.
-    #     """
-    #     # Compute the global stiffness matrices
-    #     Kg_global_assembled = self.assemble_global_geometric_stiffness_matrix()
-    #     K_global_assembled = self.structure.assemble_global_stiffness_matrix()
-
-    #     # Get constrained DOFs from the solver
-    #     constrained_dofs = solver.get_constrained_dofs()
-    #     all_dofs = np.arange(K_global_assembled.shape[0])  # Full DOFs
-    #     free_dofs = np.setdiff1d(all_dofs, constrained_dofs)  # Free DOFs
-
-    #     # Apply boundary conditions
-    #     K_reduced, Kg_reduced = self.apply_boundary_conditions(K_global_assembled, Kg_global_assembled, constrained_dofs)
-
-    #     # Solve the generalized eigenvalue problem
-    #     eigenvalues, eigenvectors = eigh(K_reduced, -Kg_reduced)
-
-    #     # Extract the smallest positive eigenvalue
-    #     positive_eigenvalues = eigenvalues[eigenvalues > 0]
-        
-    #     if len(positive_eigenvalues) == 0:
-    #         raise ValueError("No positive eigenvalues found. Check the system setup.")
-
-    #     min_eigenvalue = np.min(positive_eigenvalues)
-
-    #     # Find the index of the minimum positive eigenvalue
-    #     min_index = np.where(eigenvalues == min_eigenvalue)[0][0]
-
-    #     # Extract the corresponding reduced eigenvector
-    #     min_eigenvector = eigenvectors[:, min_index]
-
-    #     # Create the full global mode shape and insert zeros at constrained DOFs
-    #     global_mode_shape = np.zeros(K_global_assembled.shape[0])
-    #     global_mode_shape[free_dofs] = min_eigenvector  # Fill only free DOFs
-
-    #     return min_eigenvalue, global_mode_shape
     def calculate_critical_load(self, solver):
         """
         Calculates the critical load and reconstructs the full global mode shape.
@@ -595,16 +387,17 @@ class BucklingAnalysis:
             - global_mode_shape: The full eigenvector (mode shape) with zeros at constrained DOFs.
         """
         # Compute the global stiffness matrices
-        Kg_global_assembled = self.assemble_global_geometric_stiffness_matrix()
-        K_global_assembled = self.structure.assemble_global_stiffness_matrix()
+        Kg_global_assembled = self.compute_global_geometric_stiffness_matrix()
+        K_global_assembled = self.structure.compute_global_stiffness_matrix()
 
-        # Get constrained DOFs from the solver
-        constrained_dofs = solver.get_constrained_dofs()
-        all_dofs = np.arange(K_global_assembled.shape[0])  # Full DOFs
-        free_dofs = np.setdiff1d(all_dofs, constrained_dofs)  # Free DOFs
+        # Identify constrained DOFs directly
+        constrained_dofs = {node * 6 + dof for node, constraints in solver.boundary_conditions.supports.items()
+                            for dof in range(6) if constraints[dof + 1] == 1}
+        free_dofs = np.setdiff1d(np.arange(K_global_assembled.shape[0]), list(constrained_dofs))
 
-        # Apply boundary conditions
-        K_reduced, Kg_reduced = self.apply_boundary_conditions(K_global_assembled, Kg_global_assembled, constrained_dofs)
+        # Extract submatrices for free DOFs
+        K_reduced = K_global_assembled[np.ix_(free_dofs, free_dofs)]
+        Kg_reduced = Kg_global_assembled[np.ix_(free_dofs, free_dofs)]
 
         # Solve the generalized eigenvalue problem
         eigenvalues, eigenvectors = eigh(K_reduced, -Kg_reduced)
@@ -626,15 +419,12 @@ class BucklingAnalysis:
         # Normalize the eigenvector to ensure consistent magnitude
         min_eigenvector /= np.linalg.norm(min_eigenvector)
 
-        # Enforce a consistent sign convention (ensuring the largest absolute entry is positive)
-        if min_eigenvector[np.argmax(np.abs(min_eigenvector))] < 0:
-            min_eigenvector *= -1
-
         # Create the full global mode shape and insert zeros at constrained DOFs
         global_mode_shape = np.zeros(K_global_assembled.shape[0])
         global_mode_shape[free_dofs] = min_eigenvector  # Fill only free DOFs
 
         return min_eigenvalue, global_mode_shape
+
 
 
 class PlotResults:
@@ -653,7 +443,8 @@ class PlotResults:
 
     def hermite_interpolation(self, u1, theta1, u2, theta2, L, num_points=20):
         """
-        Performs Hermite cubic interpolation for bending displacements.
+        Performs Hermite cubic interpolation for bending displacements using the exact
+        shape functions from the provided image.
 
         Parameters:
         - u1, u2: Displacements at both nodes.
@@ -664,21 +455,23 @@ class PlotResults:
         Returns:
         - Interpolated displacement values.
         """
-        s_vals = np.linspace(0, 1, num_points)  # Normalized coordinate (0 to 1)
+        x_vals = np.linspace(0, L, num_points)  # Physical coordinate x
         
-        # Hermite shape functions
-        N1 = 1 - 3 * s_vals**2 + 2 * s_vals**3
-        N2 = L * (s_vals - 2 * s_vals**2 + s_vals**3)
-        N3 = 3 * s_vals**2 - 2 * s_vals**3
-        N4 = L * (-s_vals**2 + s_vals**3)
+        # Shape functions from the image
+        N1 = 1 - 3 * (x_vals / L) ** 2 + 2 * (x_vals / L) ** 3
+        N2 = 3 * (x_vals / L) ** 2 - 2 * (x_vals / L) ** 3
+        N3 = x_vals * (1 - x_vals / L) ** 2
+        N4 = x_vals * ((x_vals / L) ** 2 - x_vals / L)
 
         # Compute interpolated displacements
-        u_interp = N1 * u1 + N2 * theta1 + N3 * u2 + N4 * theta2
+        u_interp = N1 * u1 + N2 * u2 + N3 * theta1 + N4 * theta2
         return u_interp
 
-    def plot_deformed_shape(self, num_points=500):
+
+    def plot_deformed_shape(self, num_points=20):
         """
-        Plots the deformed shape of the 3D beam structure using Hermite interpolation.
+        Plots the deformed shape of the 3D beam structure using Hermite interpolation,
+        including transformation to local coordinates for elements in arbitrary directions.
         """
         fig = plt.figure(figsize=(8, 6))
         ax = fig.add_subplot(111, projection='3d')
@@ -697,33 +490,48 @@ class PlotResults:
             # Get original nodal coordinates
             x1, y1, z1 = self.structure.nodes[n1][1:]
             x2, y2, z2 = self.structure.nodes[n2][1:]
-            
+
             # Compute element length
             L = self.structure.element_length(n1, n2)
 
-            # Extract displacements & rotations from global displacement vector
-            u1 = self.U_global[n1 * 6:(n1 * 6) + 3].flatten()  # (ux, uy, uz)
-            u2 = self.U_global[n2 * 6:(n2 * 6) + 3].flatten()
-            theta1 = self.U_global[(n1 * 6) + 3:(n1 * 6) + 6].flatten()  # (θx, θy, θz)
-            theta2 = self.U_global[(n2 * 6) + 3:(n2 * 6) + 6].flatten()
+            # Compute rotation matrix for transformation
+            gamma = rotation_matrix_3D(x1, y1, z1, x2, y2, z2)
+            Gamma = transformation_matrix_3D(gamma)  # 12x12 transformation matrix
+
+            # Extract global displacements & rotations
+            U_global_element = np.hstack([
+                self.U_global[n1 * 6:(n1 * 6) + 6].flatten(),
+                self.U_global[n2 * 6:(n2 * 6) + 6].flatten()
+            ])
+
+            # Transform to local coordinates
+            U_local_element = Gamma @ U_global_element
+
+            # Extract local displacements
+            u1, v1, w1, theta_x1, theta_y1, theta_z1 = U_local_element[:6]
+            u2, v2, w2, theta_x2, theta_y2, theta_z2 = U_local_element[6:]
 
             # Compute axial displacement (linear interpolation)
-            u_interp_x = np.linspace(u1[0], u2[0], num_points) * self.scale
+            u_interp_local_x = np.linspace(u1, u2, num_points) * self.scale
 
-            # Interpolate bending displacements using Hermite functions
-            u_interp_y = self.hermite_interpolation(u1[1], theta1[2], u2[1], theta2[2], L, num_points) * self.scale
-            u_interp_z = self.hermite_interpolation(u1[2], theta1[1], u2[2], theta2[1], L, num_points) * self.scale
+            # Bending in XY plane (v-displacement) is associated with θz
+            u_interp_local_y = self.hermite_interpolation(v1, theta_z1, v2, theta_z2, L, num_points) * self.scale
+            # Bending in XZ plane (w-displacement) is associated with θy
+            u_interp_local_z = self.hermite_interpolation(w1, theta_y1, w2, theta_y2, L, num_points) * self.scale
 
-            # Compute torsional rotation (linear interpolation)
-            theta_interp_x = np.linspace(theta1[0], theta2[0], num_points)
+            # Stack into an array for transformation back to global coordinates
+            u_interp_local = np.vstack([u_interp_local_x, u_interp_local_y, u_interp_local_z])
 
+            # # Transform back to global coordinates
+            u_interp_global = gamma.T @ u_interp_local
+            
             # Compute deformed positions
-            x_interp = np.linspace(x1, x2, num_points) + u_interp_x
-            y_interp = np.linspace(y1, y2, num_points) + u_interp_y
-            z_interp = np.linspace(z1, z2, num_points) + u_interp_z
+            x_interp = np.linspace(x1, x2, num_points) + u_interp_global[0, :]
+            y_interp = np.linspace(y1, y2, num_points) + u_interp_global[1, :]
+            z_interp = np.linspace(z1, z2, num_points) + u_interp_global[2, :]
 
             # Plot deformed element
-            ax.plot(x_interp, y_interp, z_interp, 'r', linewidth=1.5)  # Red for deformed shape
+            ax.plot(x_interp, y_interp, z_interp, 'r', linewidth=1.5)
 
         # Plot nodes
         node_coords = np.array([self.structure.nodes[n][1:] for n in self.structure.nodes])
@@ -736,6 +544,7 @@ class PlotResults:
         ax.set_title('Deformed Structure (Red) vs Undeformed (Dashed Black)')
         plt.legend()
         plt.show()
+
 
 
 # Useful functions
@@ -764,10 +573,7 @@ def rotation_matrix_3D(x1: float, y1: float, z1: float, x2: float, y2: float, z2
         else:
             # otherwise use the global z axis
             v_temp = np.array([0, 0, 1.0])
-    else:
-        check_unit_vector(v_temp)
-        check_parallel(local_x, v_temp)
-    
+
     # Compute the local y axis by taking the cross product of v_temp and local_x
     local_y = np.cross(v_temp, local_x)
     local_y = local_y / np.linalg.norm(local_y)
@@ -796,19 +602,3 @@ def transformation_matrix_3D(gamma: np.ndarray) -> np.ndarray:
     Gamma[6:9, 6:9] = gamma
     Gamma[9:12, 9:12] = gamma
     return Gamma
-
-def check_unit_vector(vec: np.ndarray):
-    """
-    """
-    if np.isclose(np.linalg.norm(vec), 1.0):
-        return
-    else:
-        raise ValueError("Expected a unit vector for reference vector.")
-
-def check_parallel(vec_1: np.ndarray, vec_2: np.ndarray):
-    """
-    """
-    if np.isclose(np.linalg.norm(np.cross(vec_1, vec_2)), 0.0):
-        raise ValueError("Reference vector is parallel to beam axis.")
-    else:
-        return
