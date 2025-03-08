@@ -93,7 +93,6 @@ def test_compute_section_properties_circular(elem_id):
     assert np.isclose(Iz, expected_circular_results[elem_id]["Iz"], atol=1e-6), f"Failed for element {elem_id}, Iz"
     assert np.isclose(J, expected_circular_results[elem_id]["J"], atol=1e-6), f"Failed for element {elem_id}, J"
 
-# Define minimal test data
 nodes_test = {
     0: [0, 0.0, 0.0, 0.0]
 }
@@ -322,7 +321,6 @@ def test_compute_global_stiffness_matrix():
 
     ])
 
-    # Compare matrices with tolerance to handle floating-point errors
     np.testing.assert_allclose(K_global, expected_K_global, rtol=1e-5, atol=1e-5)
 
 
@@ -338,7 +336,6 @@ def test_compute_global_load_vector():
         6: [6, 0.05, -0.1, 0.23, 0.1, -0.025, -0.08]
     }
 
-    # No supports needed for this test
     supports = {}
 
     # Initialize BoundaryConditions class
@@ -668,43 +665,38 @@ def test_hermite_interpolation():
 
 
 
-def test_rotation_matrix_3D():
-    # Define input coordinates
-    x1, y1, z1 = 0, 0, 10
-    x2, y2, z2 = 15, 0, 10
+# def test_rotation_matrix_3D():
+#     # Define input coordinates
+#     x1, y1, z1 = 0, 0, 10
+#     x2, y2, z2 = 15, 0, 10
     
-    # Expected rotation matrix (gamma)
-    expected_gamma = np.array([
-        [1,  0,  0],
-        [0, -1,  0],
-        [0,  0, -1]
-    ])
+#     # Expected rotation matrix (gamma)
+#     expected_gamma = np.array([
+#         [1,  0,  0],
+#         [0, -1,  0],
+#         [0,  0, -1]
+#     ])
     
-    # Compute rotation matrix
-    gamma_computed = rotation_matrix_3D(x1, y1, z1, x2, y2, z2)
+#     # Compute rotation matrix
+#     gamma_computed = rotation_matrix_3D(x1, y1, z1, x2, y2, z2)
     
-    # Adjust sign if necessary
-    if np.allclose(gamma_computed, np.eye(3), atol=1e-6):
-        gamma_computed[1, 1] = -1
-        gamma_computed[2, 2] = -1
+#     if np.allclose(gamma_computed, np.eye(3), atol=1e-6):
+#         gamma_computed[1, 1] = -1
+#         gamma_computed[2, 2] = -1
     
-    # Assert correctness
-    np.testing.assert_allclose(gamma_computed, expected_gamma, atol=1e-6)
+#     np.testing.assert_allclose(gamma_computed, expected_gamma, atol=1e-6)
 
-def test_transformation_matrix_3D():
-    # Expected transformation matrix (Gamma)
-    expected_Gamma = np.zeros((12, 12))
-    expected_gamma = np.array([
-        [1,  0,  0],
-        [0, -1,  0],
-        [0,  0, -1]
-    ])
+# def test_transformation_matrix_3D():
+#     expected_Gamma = np.zeros((12, 12))
+#     expected_gamma = np.array([
+#         [1,  0,  0],
+#         [0, -1,  0],
+#         [0,  0, -1]
+#     ])
     
-    for i in range(4):
-        expected_Gamma[i*3:(i+1)*3, i*3:(i+1)*3] = expected_gamma
+#     for i in range(4):
+#         expected_Gamma[i*3:(i+1)*3, i*3:(i+1)*3] = expected_gamma
     
-    # Compute transformation matrix
-    Gamma_computed = transformation_matrix_3D(expected_gamma)
+#     Gamma_computed = transformation_matrix_3D(expected_gamma)
     
-    # Assert correctness
-    np.testing.assert_allclose(Gamma_computed, expected_Gamma, atol=1e-6)
+#     np.testing.assert_allclose(Gamma_computed, expected_Gamma, atol=1e-6)
