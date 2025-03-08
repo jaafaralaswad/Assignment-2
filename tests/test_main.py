@@ -652,6 +652,17 @@ def test_compute_global_geometric_stiffness_matrix():
 
 
 
+def test_hermite_interpolation():
+    plotter = PlotResults(None, None)
+    
+    u1, theta1 = 0, 0
+    u2, theta2 = 1, 0
+    L = 10
+    num_points = 5
+    
+    u_interp = plotter.hermite_interpolation(u1, theta1, u2, theta2, L, num_points)
+    expected_values = np.array([0., 0.15625, 0.5, 0.84375, 1.])
+    np.testing.assert_allclose(u_interp, expected_values, atol=1e-5)
 
 
 
