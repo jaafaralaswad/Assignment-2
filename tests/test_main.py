@@ -626,6 +626,29 @@ def test_calculate_critical_load():
 
 
 
+def test_compute_global_geometric_stiffness_matrix():
+    # Define a simple test structure
+    nodes = {0: [0, 0.0, 0.0, 0.0], 1: [1, 1.0, 0.0, 0.0]}
+    elements = [[0, 1]]
+    element_properties = {0: {"r": 1.0, "E": 10000, "nu": 0.3}}
+    
+    # Initialize structure
+    structure = Structure(nodes, elements, element_properties)
+    
+    # Define dummy solver and displacements
+    loads = {0: [0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 1: [1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]}
+    supports = {0: [0, 1, 1, 1, 1, 1, 1], 1: [1, 0, 0, 0, 0, 0, 0]}
+    bc = BoundaryConditions(loads, supports)
+    solver = Solver(structure, bc)
+    U_global = np.zeros(12)  # Mock displacement array
+    
+    # Perform buckling analysis
+    buckling_analysis = BucklingAnalysis(structure, solver, U_global)
+    global_KG = buckling_analysis.compute_global_geometric_stiffness_matrix()
+    
+    # Check shape and basic properties
+    assert global_KG.shape == (12, 12)
+    assert np.allclose(global_KG, global_KG.T, atol=1e-6)  # Should be symmetric
 
 
 
